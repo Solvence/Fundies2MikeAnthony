@@ -1,17 +1,20 @@
+import java.util.Iterator;
+
 import javalib.worldimages.Posn;
 import tester.Tester;
 
 // Represents a Sentinel at the beginning or end of a deque,
 // or a node in the middle of a deque
 abstract class ANode<T> {
-  //Fields
+  // Fields
   ANode<T> next;
   ANode<T> prev;
-  
+
   // to compute the number of nodes in the remainder of this deque list
   abstract int countHelp();
 
-  // Returns this node's data or an error if it's a Sentinel because sentinels can not be removed
+  // Returns this node's data or an error if it's a Sentinel because sentinels can
+  // not be removed
   // since they are the keystone of a deque list, and removes it from the deque
   // EFFECT: Removes this node from the deque list (unless it's a Sentinel)
   abstract T remove();
@@ -34,21 +37,26 @@ class Sentinel<T> extends ANode<T> {
     return this.next.countHelp();
   }
 
-  // Returns 0 if this sentinel's next is itself, as there are no nodes in the deque
+  // Returns 0 if this sentinel's next is itself, as there are no nodes in the
+  // deque
   public int countHelp() {
     return 0;
   }
 
-  // Removes and returns the first node in the deque list with this sentinel as its head, or 
+  // Removes and returns the first node in the deque list with this sentinel as
+  // its head, or
   // throws an error if said deque list is empty
-  // EFFECT: removes the first node in the deque list with this sentinel as its head
+  // EFFECT: removes the first node in the deque list with this sentinel as its
+  // head
   T removeFirst() {
     return this.next.remove();
   }
 
-  // Removes and returns the last node in the deque list with this sentinel as its head, 
+  // Removes and returns the last node in the deque list with this sentinel as its
+  // head,
   // or throws an error if said deque list is empty
-  // EFFECT: removes the last node in the deque list with this sentinel as its head
+  // EFFECT: removes the last node in the deque list with this sentinel as its
+  // head
   T removeLast() {
     return this.prev.remove();
   }
@@ -58,13 +66,15 @@ class Sentinel<T> extends ANode<T> {
     throw new RuntimeException("Error: Can't remove from an empty Deque list");
   }
 
-  // Computes the first Node in the deque list with this sentinel as its head for which the 
+  // Computes the first Node in the deque list with this sentinel as its head for
+  // which the
   // given predicate returns true
   ANode<T> find(IPred<T> pred) {
     return this.next.findHelp(pred);
   }
-  
-  // If no Node for which the given predicate returns true, the Sentinel gets returned
+
+  // If no Node for which the given predicate returns true, the Sentinel gets
+  // returned
   ANode<T> findHelp(IPred<T> pred) {
     return this;
   }
@@ -72,7 +82,7 @@ class Sentinel<T> extends ANode<T> {
 
 // Represents a Node of a Deque
 class Node<T> extends ANode<T> {
-  //Field
+  // Field
   T data;
 
   // the constructor that simply takes in the data value for this node
@@ -81,10 +91,13 @@ class Node<T> extends ANode<T> {
     this.next = null;
     this.prev = null;
   }
-  
-  // the constructor that takes in the next and previous nodes with respect to this node
-  // if either the next or previous nodes are null, the constructor will throw an error
-  // EFFECT: sets the previous and next nodes to refer respectively to this node as well
+
+  // the constructor that takes in the next and previous nodes with respect to
+  // this node
+  // if either the next or previous nodes are null, the constructor will throw an
+  // error
+  // EFFECT: sets the previous and next nodes to refer respectively to this node
+  // as well
   Node(T data, ANode<T> next, ANode<T> prev) {
     if (next == null) {
       throw new IllegalArgumentException("next node is null");
@@ -95,7 +108,7 @@ class Node<T> extends ANode<T> {
     this.data = data;
     this.next = next;
     this.prev = prev;
-    
+
     this.next.prev = this;
     this.prev.next = this;
   }
@@ -106,7 +119,8 @@ class Node<T> extends ANode<T> {
   }
 
   // Removes and returns this node's data
-  // EFFECT: sets the next and previous nodes to refer to each other, effectively skipping this
+  // EFFECT: sets the next and previous nodes to refer to each other, effectively
+  // skipping this
   // node
   T remove() {
     this.prev.next = this.next;
@@ -118,21 +132,23 @@ class Node<T> extends ANode<T> {
   ANode<T> findHelp(IPred<T> pred) {
     if (pred.apply(this.data)) {
       return this;
-    } else {
+    }
+    else {
       return this.next.findHelp(pred);
     }
   }
 }
 
 // Represents a double ended queue
-class Deque<T> {
+class Deque<T> implements Iterable {
   Sentinel<T> header;
 
-  // the constructor that takes in no arguments and simply constructs an empty deque
+  // the constructor that takes in no arguments and simply constructs an empty
+  // deque
   Deque() {
     this.header = new Sentinel<T>();
   }
-  
+
   // the constructor that takes in a sentinel
   Deque(Sentinel<T> header) {
     this.header = header;
@@ -142,19 +158,21 @@ class Deque<T> {
   int size() {
     return this.header.count();
   }
-  
+
   // Adds the given data as a node to the head of the deque
-  // EFFECT: Modfies the deque to add the given data as a Node to the start of the deque
+  // EFFECT: Modfies the deque to add the given data as a Node to the start of the
+  // deque
   void addAtHead(T data) {
     new Node<T>(data, this.header.next, this.header);
   }
 
   // Adds the given data as a node to the tail of the deque
-  // EFFECT: Modfies the deque to add the given data as a Node to the end of the deque
+  // EFFECT: Modfies the deque to add the given data as a Node to the end of the
+  // deque
   void addAtTail(T data) {
     new Node<T>(data, this.header, this.header.prev);
   }
-  
+
   // Removes the first node and returns the data in the first node in the deque
   // EFFECT: Removes the first element from the deque
   // Throws an error if deque is empty
@@ -174,11 +192,17 @@ class Deque<T> {
   ANode<T> find(IPred<T> pred) {
     return this.header.find(pred);
   }
-  
+
   // Removes the given Node from the deque
   // EFFECT: Modifies this deque to remove the given Node
   void removeNode(ANode<T> node) {
     node.remove();
+  }
+
+  @Override
+  public Iterator<T> iterator() {
+    // TODO Auto-generated method stub
+    return new ForwardDequeIterator<T>(this);
   }
 }
 
@@ -205,16 +229,44 @@ class YCoord1 implements IPred<Posn> {
   }
 }
 
+class ForwardDequeIterator<T> implements Iterator<T> {
+
+  ANode<T> currentNode;
+
+  ForwardDequeIterator(Deque<T> deq) {
+    this.currentNode = deq.header.next;
+  }
+
+  @Override
+  public boolean hasNext() {
+    // TODO Auto-generated method stub
+    return (this.currentNode.countHelp() >= 1);
+  }
+
+  @Override
+  public T next() {
+
+    if (!this.hasNext()) {
+      throw new RuntimeException("No next");
+    }
+    // TODO Auto-generated method stub
+    T answer = ((Node<T>) currentNode).data;
+    currentNode = currentNode.next;
+    return answer;
+  }
+
+}
+
 // examples and tests
 class ExamplesDeque {
   Deque<String> deque1;
-  
+
   Deque<String> deque2;
   Node<String> nodeABC;
   Node<String> nodeBCD;
   Node<String> nodeCDE;
   Node<String> nodeDEF;
-  
+
   Deque<String> deque3;
   Node<String> nodeREE;
   Node<String> nodeHA;
@@ -226,16 +278,16 @@ class ExamplesDeque {
   Node<Posn> nodePosn2;
   Node<Posn> nodePosn3;
   Node<Posn> nodePosn4;
-  
+
   void initTestConditions() {
     deque1 = new Deque<String>();
-    
+
     deque2 = new Deque<String>();
     nodeABC = new Node<String>("abc", deque2.header, deque2.header);
     nodeBCD = new Node<String>("bcd", deque2.header, nodeABC);
     nodeCDE = new Node<String>("cde", deque2.header, nodeBCD);
     nodeDEF = new Node<String>("def", deque2.header, nodeCDE);
-    
+
     deque3 = new Deque<String>();
     nodeREE = new Node<String>("ree", deque3.header, deque3.header);
     nodeHA = new Node<String>("ha", deque3.header, nodeREE);
@@ -248,97 +300,97 @@ class ExamplesDeque {
     nodePosn3 = new Node<>(new Posn(1, 1), deque4.header, nodePosn2);
     nodePosn4 = new Node<>(new Posn(2, 1), deque4.header, nodePosn3);
   }
-  
+
   void testRemoveFromHead(Tester t) {
     this.initTestConditions();
-    
+
     t.checkExpect(deque2.header.next, nodeABC);
     t.checkExpect(deque2.header.next.next, nodeBCD);
     t.checkExpect(deque2.header.next.next.next, nodeCDE);
     t.checkExpect(deque2.header.next.next.next.next, nodeDEF);
     t.checkExpect(deque2.header.prev, nodeDEF);
-    
+
     deque2.removeFromHead();
-    
+
     t.checkExpect(deque2.header.next, nodeBCD);
     t.checkExpect(deque2.header.next.next, nodeCDE);
     t.checkExpect(deque2.header.next.next.next, nodeDEF);
     t.checkExpect(deque2.header.next.next.next.next, deque2.header);
     t.checkExpect(deque2.header.prev, nodeDEF);
-    
+
     deque2.removeFromHead();
-    
+
     t.checkExpect(deque2.header.next, nodeCDE);
     t.checkExpect(deque2.header.next.next, nodeDEF);
     t.checkExpect(deque2.header.next.next.next, deque2.header);
     t.checkExpect(deque2.header.next.next.next.next, nodeCDE);
     t.checkExpect(deque2.header.prev, nodeDEF);
-    
+
     t.checkExpect(deque1.header.next, deque1.header);
-    
-    t.checkException(new RuntimeException("Error: Can't remove from an empty Deque list"), 
-        deque1, "removeFromHead");
-    
+
+    t.checkException(new RuntimeException("Error: Can't remove from an empty Deque list"), deque1,
+        "removeFromHead");
+
     t.checkExpect(deque4.header.next, nodePosn1);
     t.checkExpect(deque4.header.next.next, nodePosn2);
     t.checkExpect(deque4.header.next.next.next, nodePosn3);
     t.checkExpect(deque4.header.next.next.next.next, nodePosn4);
     t.checkExpect(deque4.header.prev, nodePosn4);
-    
+
     deque4.removeFromHead();
-    
+
     t.checkExpect(deque4.header.next, nodePosn2);
     t.checkExpect(deque4.header.next.next, nodePosn3);
     t.checkExpect(deque4.header.next.next.next, nodePosn4);
     t.checkExpect(deque4.header.next.next.next.next, deque4.header);
     t.checkExpect(deque4.header.prev, nodePosn4);
   }
-  
+
   void testRemoveFromTail(Tester t) {
     this.initTestConditions();
-    
+
     t.checkExpect(deque2.header.next, nodeABC);
     t.checkExpect(deque2.header.next.next, nodeBCD);
     t.checkExpect(deque2.header.next.next.next, nodeCDE);
     t.checkExpect(deque2.header.next.next.next.next, nodeDEF);
     t.checkExpect(deque2.header.prev, nodeDEF);
-    
+
     deque2.removeFromTail();
-    
+
     t.checkExpect(deque2.header.next, nodeABC);
     t.checkExpect(deque2.header.next.next, nodeBCD);
     t.checkExpect(deque2.header.next.next.next, nodeCDE);
     t.checkExpect(deque2.header.next.next.next.next, deque2.header);
     t.checkExpect(deque2.header.prev, nodeCDE);
-    
+
     deque2.removeFromTail();
-    
+
     t.checkExpect(deque2.header.next, nodeABC);
     t.checkExpect(deque2.header.next.next, nodeBCD);
     t.checkExpect(deque2.header.next.next.next, deque2.header);
     t.checkExpect(deque2.header.next.next.next.next, nodeABC);
     t.checkExpect(deque2.header.prev, nodeBCD);
-    
+
     t.checkExpect(deque1.header.next, deque1.header);
-    
-    t.checkException(new RuntimeException("Error: Can't remove from an empty Deque list"), 
-        deque1, "removeFromTail");
-    
+
+    t.checkException(new RuntimeException("Error: Can't remove from an empty Deque list"), deque1,
+        "removeFromTail");
+
     t.checkExpect(deque4.header.next, nodePosn1);
     t.checkExpect(deque4.header.next.next, nodePosn2);
     t.checkExpect(deque4.header.next.next.next, nodePosn3);
     t.checkExpect(deque4.header.next.next.next.next, nodePosn4);
     t.checkExpect(deque4.header.prev, nodePosn4);
-    
+
     deque4.removeFromTail();
-    
+
     t.checkExpect(deque4.header.next, nodePosn1);
     t.checkExpect(deque4.header.next.next, nodePosn2);
     t.checkExpect(deque4.header.next.next.next, nodePosn3);
     t.checkExpect(deque4.header.next.next.next.next, deque4.header);
     t.checkExpect(deque4.header.prev, nodePosn3);
   }
-  
+
   void testFind(Tester t) {
     this.initTestConditions();
     t.checkExpect(deque2.find(new HasThreeChars()), nodeABC);
@@ -346,31 +398,31 @@ class ExamplesDeque {
     t.checkExpect(deque1.find(new HasThreeChars()), deque1.header);
     t.checkExpect(deque4.find(new YCoord1()), nodePosn2);
   }
-  
+
   void testAddAtHead(Tester t) {
     this.initTestConditions();
-    t.checkExpect(((Node) deque4.header.next).data, new Posn(0,0));
-    t.checkExpect(((Node) deque3.header.next).data, "ree");
+    t.checkExpect(((Node<Posn>) deque4.header.next).data, new Posn(0, 0));
+    t.checkExpect(((Node<String>) deque3.header.next).data, "ree");
     t.checkExpect(deque1.header.next, deque1.header);
-    deque4.addAtHead(new Posn(3,3));
+    deque4.addAtHead(new Posn(3, 3));
     deque3.addAtHead("SDS");
     deque1.addAtHead("ADA");
-    t.checkExpect(((Node) deque4.header.next).data, new Posn(3,3));
-    t.checkExpect(((Node) deque3.header.next).data, "SDS");
-    t.checkExpect(((Node) deque1.header.next).data, "ADA");
+    t.checkExpect(((Node<Posn>) deque4.header.next).data, new Posn(3, 3));
+    t.checkExpect(((Node<String>) deque3.header.next).data, "SDS");
+    t.checkExpect(((Node<String>) deque1.header.next).data, "ADA");
   }
 
   void testAddAtTail(Tester t) {
     this.initTestConditions();
-    t.checkExpect(((Node) deque4.header.prev).data, new Posn(2,1));
-    t.checkExpect(((Node) deque3.header.prev).data, "nah");
+    t.checkExpect(((Node<Posn>) deque4.header.prev).data, new Posn(2, 1));
+    t.checkExpect(((Node<String>) deque3.header.prev).data, "nah");
     t.checkExpect(deque1.header.prev, deque1.header);
-    deque4.addAtTail(new Posn(3,3));
+    deque4.addAtTail(new Posn(3, 3));
     deque3.addAtTail("SDS");
     deque1.addAtTail("ADA");
-    t.checkExpect(((Node) deque4.header.prev).data, new Posn(3,3));
-    t.checkExpect(((Node) deque3.header.prev).data, "SDS");
-    t.checkExpect(((Node) deque1.header.prev).data, "ADA");
+    t.checkExpect(((Node<Posn>) deque4.header.prev).data, new Posn(3, 3));
+    t.checkExpect(((Node<String>) deque3.header.prev).data, "SDS");
+    t.checkExpect(((Node<String>) deque1.header.prev).data, "ADA");
   }
 
   void testSize(Tester t) {
@@ -426,7 +478,7 @@ class ExamplesDeque {
     t.checkExpect(deque1.header.next, deque1.header);
 
     t.checkException(new RuntimeException("Error: Can't remove from an empty Deque list"),
-            deque1.header, "removeFirst");
+        deque1.header, "removeFirst");
 
     t.checkExpect(deque4.header.next, nodePosn1);
     t.checkExpect(deque4.header.next.next, nodePosn2);
@@ -471,7 +523,7 @@ class ExamplesDeque {
     t.checkExpect(deque1.header.next, deque1.header);
 
     t.checkException(new RuntimeException("Error: Can't remove from an empty Deque list"),
-            deque1.header, "removeLast");
+        deque1.header, "removeLast");
 
     t.checkExpect(deque4.header.next, nodePosn1);
     t.checkExpect(deque4.header.next.next, nodePosn2);
@@ -596,7 +648,7 @@ class ExamplesDeque {
     t.checkExpect(deque4.header.prev, nodePosn4);
 
     t.checkException(new RuntimeException("Error: Can't remove from an empty Deque list"),
-            deque4.header, "remove");
+        deque4.header, "remove");
   }
 
   void testFindInSentinel(Tester t) {
@@ -621,12 +673,12 @@ class ExamplesDeque {
   }
 
   void testNodeConstructorException(Tester t) {
-    t.checkConstructorException(new IllegalArgumentException("next node is null"),
-            "Node", "blah", null, null);
-    t.checkConstructorException(new IllegalArgumentException("next node is null"),
-            "Node", "blah", null, deque2.header);
-    t.checkConstructorException(new IllegalArgumentException("previous node is null"),
-            "Node", new Posn(3, 2), deque4.header, null);
+    t.checkConstructorException(new IllegalArgumentException("next node is null"), "Node", "blah",
+        null, null);
+    t.checkConstructorException(new IllegalArgumentException("next node is null"), "Node", "blah",
+        null, deque2.header);
+    t.checkConstructorException(new IllegalArgumentException("previous node is null"), "Node",
+        new Posn(3, 2), deque4.header, null);
   }
 
 }

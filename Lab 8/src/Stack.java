@@ -35,7 +35,7 @@ class Utils {
       stk.push(item);
     }
     ArrayList<T> reversed = new ArrayList<T>();
-    for(T item: source) {
+    for(@SuppressWarnings("unused") T item: source) {
       reversed.add(stk.pop());
     }
     return reversed;
