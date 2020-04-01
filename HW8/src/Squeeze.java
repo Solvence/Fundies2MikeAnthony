@@ -239,11 +239,7 @@ class ExamplesSqueeze {
   // TODO test field of field on pixel neighbors
   
   void testWorld (Tester t) {
-    
     Picture p = new Picture("balloons.jpg");
     p.bigBang(800, 344, 1.0 / 4);
-        
-    
   }
-  
 }
