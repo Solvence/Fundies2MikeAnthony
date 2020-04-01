@@ -72,20 +72,19 @@ class Picture extends World {
   }
   
   public WorldScene makeScene() {
-    WorldImage img = new FromFileImage("balloons.jpg");
-    ComputedPixelImage cpi = new ComputedPixelImage((int) img.getWidth(), (int) img.getHeight());
+    ComputedPixelImage cpi = new ComputedPixelImage(this.width, this.height);
     APixel nextRowPixel = topLeft;
-    for (int row = 0; row < img.getHeight(); row += 1) {
+    for (int row = 0; row < this.height; row += 1) {
       nextRowPixel = nextRowPixel.down;
       APixel nextPixel = nextRowPixel.right;
-      for (int col = 0; col < img.getWidth(); col += 1) {
+      for (int col = 0; col < this.width; col += 1) {
         cpi.setPixel(col, row, nextPixel.color);
         nextPixel = nextPixel.right;
       }
     }
     
-    WorldScene ws = new WorldScene(800, 344);
-    ws.placeImageXY(cpi, 400, 172);
+    WorldScene ws = new WorldScene(this.width, this.height);
+    ws.placeImageXY(cpi, this.width / 2, this.height / 2);
     
     return ws;
   }
@@ -99,6 +98,8 @@ class Picture extends World {
         currentPixel.remove();
         this.seamToRemove = this.seamToRemove.cameFrom;
       }
+      currentPixel.up.remove();
+      width -= 1;
     } else {
       ArrayList<ArrayList<SeamInfo>> seams = new ArrayList<ArrayList<SeamInfo>>();
       
