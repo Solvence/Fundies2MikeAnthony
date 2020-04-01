@@ -19,8 +19,7 @@ class SeamInfo {
   }
 
   // constructor that only takes in two fields, used for the first row of pixels,
-  // when the seam has
-  // nothing it came from
+  // when the seam has nothing it came from
   SeamInfo(APixel thisPixel, double totalWeight) {
     this.thisPixel = thisPixel;
     this.totalWeight = totalWeight;
@@ -28,14 +27,14 @@ class SeamInfo {
   }
 }
 
-// Represents A Picture
+// Represents the world state of a Picture being compressed
 class Picture extends World {
-  APixel topLeft;
+  APixel topLeft;  // the top left SentinelPixel of this picture. It is the actual top left pixel's
+  // top left
   int width;
   int height;
   SeamInfo seamToRemove; // the seam to remove in the current tick. If there is no seam to remove
-  // currently, represents a default seam of the top left pixel, 0 weight, and
-  // null cameFrom
+  // currently, is either null or has a null cameFrom
 
   // Constructs a Picture and Transforms it into a 2D pixel deque that can be used for seam removal.
   Picture(String imgFileName) {
@@ -77,7 +76,7 @@ class Picture extends World {
     }
   }
 
-  // Creates the scene, run by bigbang 
+  // renders this Picture as an image
   public WorldScene makeScene() {
 
     ComputedPixelImage cpi = new ComputedPixelImage(this.width, this.height);
@@ -100,6 +99,11 @@ class Picture extends World {
 
   // Method that gets run every tick. Either removes a seam or identifies and highlights a seam 
   // to be removed the next time onTick is called. 
+  // EFFECT: if the seam is being removed on this tick, modifies the pixels in this picture to
+  // exclude the pixels being removed, and modifies the seamToRemove seam field to have a null
+  // cameFrom field (to let the next tick know that the seam has already been removed)
+  // if the seam is being highlighted on this tick, modifies the pixels in the seam to have a red
+  // color, and modifies the seamToRemove field to contain the seam to be removed in the next tick
   public void onTick() {
 
     if (this.width <= 1) {
@@ -107,62 +111,79 @@ class Picture extends World {
     }
 
     if (this.seamToRemove != null && this.seamToRemove.cameFrom != null) {
-      APixel currentPixel = this.seamToRemove.thisPixel;
-      currentPixel.down.remove();
-      while (this.seamToRemove.cameFrom != null) {
-        currentPixel = this.seamToRemove.thisPixel;
-        currentPixel.remove();
-        this.seamToRemove = this.seamToRemove.cameFrom;
-      }
-      currentPixel.up.remove();
-      width -= 1;
-    }
-    else {
+      this.removeSeam();
+    } else {
       ArrayList<ArrayList<SeamInfo>> seams = new ArrayList<ArrayList<SeamInfo>>();
-
-      APixel nextRowPixel = topLeft;
-      for (int row = 0; row < this.height; row += 1) {
-        nextRowPixel = nextRowPixel.down;
-        APixel nextPixel = nextRowPixel.right;
-        seams.add(new ArrayList<SeamInfo>());
-        for (int col = 0; col < this.width; col += 1) {
-          if (row == 0) {
-            seams.get(row).add(new SeamInfo(nextPixel, nextPixel.calculateEnergy()));
-          }
-          else {
-            SeamInfo cameFrom = seams.get(row - 1).get(col);
-            if (col != 0 && seams.get(row - 1).get(col - 1).totalWeight < cameFrom.totalWeight) {
-              cameFrom = seams.get(row - 1).get(col - 1);
-            }
-            if (col != width - 1
-                && seams.get(row - 1).get(col + 1).totalWeight < cameFrom.totalWeight) {
-              cameFrom = seams.get(row - 1).get(col + 1);
-            }
-
-            seams.get(row).add(new SeamInfo(nextPixel, nextPixel.calculateEnergy(), cameFrom));
-          }
-          nextPixel = nextPixel.right;
-        }
-      }
+      this.updateSeams(seams);
+      
+      // finds the SeamInfo in the bottom row with the least total weight
       SeamInfo seamToHighlight = seams.get(height - 1).get(0);
-
       for (int col = 1; col < this.width; col += 1) {
         if (seams.get(height - 1).get(col).totalWeight < seamToHighlight.totalWeight) {
           seamToHighlight = seams.get(height - 1).get(col);
         }
       }
-
+      
+      // updates the seamToRemove field so that, in the next tick, this seam will be removed from
+      // this image
       this.seamToRemove = seamToHighlight;
 
+      // highlights the seam in red
       while (seamToHighlight.cameFrom != null) {
         seamToHighlight.thisPixel.highlight();
         seamToHighlight = seamToHighlight.cameFrom;
       }
     }
   }
+  
+  // removes the seam labeled by the seamToRemove field from this Picture
+  // EFFECT: alters seamToRemove to have a null cameFrom, adjusts the pixels representing this
+  // Picture to account for the removed seam
+  void removeSeam() {
+    APixel currentPixel = this.seamToRemove.thisPixel;
+    currentPixel.down.remove();
+    while (this.seamToRemove.cameFrom != null) {
+      currentPixel = this.seamToRemove.thisPixel;
+      currentPixel.remove();
+      this.seamToRemove = this.seamToRemove.cameFrom;
+    }
+    currentPixel.remove();
+    currentPixel.up.remove();
+    width -= 1;
+  }
+  
+  // fills the given 2D SeamInfo array with the proper SeamInfos from this Picture
+  // EFFECT: modifies the given SeamInfo array to contain the corresponding SeamInfo for every pixel
+  // in this Picture
+  void updateSeams(ArrayList<ArrayList<SeamInfo>> seams) {
+    APixel nextRowPixel = topLeft;
+    for (int row = 0; row < this.height; row += 1) {
+      nextRowPixel = nextRowPixel.down;
+      APixel nextPixel = nextRowPixel.right;
+      seams.add(new ArrayList<SeamInfo>());
+      for (int col = 0; col < this.width; col += 1) {
+        if (row == 0) {
+          seams.get(row).add(new SeamInfo(nextPixel, nextPixel.calculateEnergy()));
+        }
+        else {
+          SeamInfo cameFrom = seams.get(row - 1).get(col);
+          if (col != 0 && seams.get(row - 1).get(col - 1).totalWeight < cameFrom.totalWeight) {
+            cameFrom = seams.get(row - 1).get(col - 1);
+          }
+          if (col != width - 1
+              && seams.get(row - 1).get(col + 1).totalWeight < cameFrom.totalWeight) {
+            cameFrom = seams.get(row - 1).get(col + 1);
+          }
+
+          seams.get(row).add(new SeamInfo(nextPixel, nextPixel.calculateEnergy(), cameFrom));
+        }
+        nextPixel = nextPixel.right;
+      }
+    }
+  }
 }
 
-// Represents a List of Pixels? 
+// Represents a pixel
 abstract class APixel {
   APixel up;
   APixel down;
@@ -193,16 +214,15 @@ abstract class APixel {
     return ((double) (color.getRed() + color.getGreen() + color.getBlue())) / 3 / 255.0;
   }
 
-  // Calculates the horizontal energy of a pixel from it's surroundings
+  // Calculates the horizontal energy of a pixel from its surroundings
   double calculateHorizEnergy() {
-
     return (this.up.left.calculateBrightness() + 2 * this.left.calculateBrightness()
         + this.down.left.calculateBrightness())
         - (this.up.right.calculateBrightness() + 2 * this.right.calculateBrightness()
             + this.down.right.calculateBrightness());
   }
 
-  // Calculates the vertical energy of a pixel from it's surroundings
+  // Calculates the vertical energy of a pixel from its surroundings
   double calculateVertEnergy() {
     return (this.up.left.calculateBrightness() + 2 * this.up.calculateBrightness()
         + this.up.right.calculateBrightness())
@@ -210,7 +230,7 @@ abstract class APixel {
             + this.down.right.calculateBrightness());
   }
 
-  // Calculates the overall energy of a pixel from it's surroundings
+  // Calculates the overall energy of a pixel from its surroundings
   double calculateEnergy() {
     return Math
         .sqrt(Math.pow(this.calculateHorizEnergy(), 2) + Math.pow(this.calculateVertEnergy(), 2));
@@ -224,7 +244,7 @@ abstract class APixel {
     this.right.left = this.left;
   }
 
-  // Highlights the pixel 
+  // Highlights this pixel 
   void highlight() {
     this.color = Color.RED;
   }
@@ -266,9 +286,8 @@ class Pixel extends APixel {
 }
 
 // Helper class for creating grids of pixels without making a Picture
-class PixelGrid extends World{
-
-  @Override
+// used for tests
+class PixelGrid extends World {
   // Renders a grid of pixels, used for testing
   public WorldScene makeScene() {
     ComputedPixelImage cpi = new ComputedPixelImage(400, 400);
@@ -283,9 +302,6 @@ class PixelGrid extends World{
     
     return ws;
   }
-  
-  
-  
 }
 
 // Examples class for testing
@@ -302,7 +318,7 @@ class ExamplesSqueeze {
   // Runs the Seam Removal Program
   void testWorld(Tester t) {
     initTestConditions();
-    //p.bigBang(800, 344, 1.0 / 28);
+    p.bigBang(800, 343, 1.0 / 28);
   }
 
   /*
@@ -422,5 +438,4 @@ class ExamplesSqueeze {
     System.out.println(surroundedPixel.left.color);
     
   }
-
 }
