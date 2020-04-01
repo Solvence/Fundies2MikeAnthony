@@ -277,6 +277,11 @@ class Pixel extends APixel {
   Pixel(APixel up, APixel down, APixel left, APixel right, Color color) {
     super(up, down, left, right, color);
   }
+  
+  // Creates a Pixel and places it in a grid of pixels surrounded by these pixels. 
+  Pixel() {
+    super(null, null, null, null, Color.BLACK);
+  }
 
 }
 
@@ -288,6 +293,8 @@ class PixelGrid extends World {
     ComputedPixelImage cpi = new ComputedPixelImage(400, 400);
     
     cpi.setPixels(0, 0, 400, 400, Color.red);
+    
+    cpi.saveImage("redBoard.jpg");
     
     WorldScene ws = new WorldScene(400, 400);
 
@@ -389,13 +396,25 @@ class ExamplesSqueeze {
     t.checkInexact(pixel.calculateBrightness(), 2.0 / 3, 0.001);
 
   }
+  
+  APixel surroundedPixel;
+  
   // initializes a pixel grid
-  void initPixelGrid(Tester t) {
+  void initPixelGrid() {
     
- 
-    PixelGrid ps = new PixelGrid();
-
+    Picture p2 = new Picture("balloons.jpg");
     
+    surroundedPixel = p2.topLeft.down.right.down.right;
+    
+    surroundedPixel.up.right.color = Color.red;
+    surroundedPixel.up.left.color = Color.blue;
+    surroundedPixel.up.color = Color.white;
+    surroundedPixel.color = Color.green;
+    surroundedPixel.right.color = Color.pink;
+    surroundedPixel.left.color = Color.red;
+    surroundedPixel.down.color = Color.DARK_GRAY;
+    surroundedPixel.down.right.color = Color.CYAN;
+    surroundedPixel.down.left.color = Color.black;
   }
   
   // test the energy calculation for a pixel's surroundings. 
@@ -408,5 +427,14 @@ class ExamplesSqueeze {
     t.checkInexact(pixel.calculateHorizEnergy(), 0.0, 0.001);
     t.checkInexact(pixel.calculateVertEnergy(), 0.0, 0.001);
     t.checkInexact(pixel.calculateEnergy(), 0.0, 0.001);
+    
+    initPixelGrid();
+    
+    t.checkExpect(surroundedPixel.calculateEnergy(), 1.0);
+    
+    System.out.println("\n");
+    System.out.println(surroundedPixel.color);
+    System.out.println(surroundedPixel.right.color);
+    System.out.println(surroundedPixel.left.color);
   }
 }
