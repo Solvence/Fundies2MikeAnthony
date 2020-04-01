@@ -72,6 +72,7 @@ class Picture extends World {
   }
   
   public WorldScene makeScene() {
+    
     ComputedPixelImage cpi = new ComputedPixelImage(this.width, this.height);
     APixel nextRowPixel = topLeft;
     for (int row = 0; row < this.height; row += 1) {
@@ -84,12 +85,18 @@ class Picture extends World {
     }
     
     WorldScene ws = new WorldScene(this.width, this.height);
+    
     ws.placeImageXY(cpi, this.width / 2, this.height / 2);
     
     return ws;
   }
   
   public void onTick() {
+    
+    if (this.width <= 1) {
+      this.endOfWorld("");
+    }
+    
     if (this.seamToRemove != null && this.seamToRemove.cameFrom != null) {
       APixel currentPixel = this.seamToRemove.thisPixel;
       currentPixel.down.remove();
@@ -241,7 +248,7 @@ class ExamplesSqueeze {
   void testWorld (Tester t) {
     
     Picture p = new Picture("balloons.jpg");
-    p.bigBang(800, 344, 1.0 / 4);
+    p.bigBang(800, 344, 1.0 / 28);
         
     
   }
