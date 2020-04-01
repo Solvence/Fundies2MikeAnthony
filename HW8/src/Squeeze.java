@@ -303,7 +303,7 @@ class ExamplesSqueeze {
   // TODO test field of field on pixel neighbors
   Picture p = new Picture("balloons.jpg");
 
-  // Initializes conditiosn for testing
+  // Initializes conditions for testing
   void initTestConditions() {
     p = new Picture("balloons.jpg");
   }
@@ -399,6 +399,8 @@ class ExamplesSqueeze {
   }
   
   // test the energy calculation for a pixel's surroundings. 
+  // this includes tests for all three methods calculateHorizEnergy, calculateVertEnergy, 
+  // and calculateEnergy
   void testCalculateEnergy(Tester t) {
     APixel sp = new SentinelPixel();
     APixel pixel = new Pixel(sp, sp, sp, sp, Color.BLUE);
@@ -406,8 +408,5 @@ class ExamplesSqueeze {
     t.checkInexact(pixel.calculateHorizEnergy(), 0.0, 0.001);
     t.checkInexact(pixel.calculateVertEnergy(), 0.0, 0.001);
     t.checkInexact(pixel.calculateEnergy(), 0.0, 0.001);
-    
-   
-    
   }
 }
