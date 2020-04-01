@@ -308,12 +308,32 @@ class PixelGrid extends World {
 class ExamplesSqueeze {
 
   // TODO test field of field on pixel neighbors
-  Picture p = new Picture("balloons.jpg");
+  Picture p;
+  Picture p3;
+  APixel surroundedPixel;
 
   // Initializes conditions for testing
   void initTestConditions() {
     p = new Picture("balloons.jpg");
+    p3 = new Picture("3by3img.jpg");
   }
+  // initializes a pixel grid
+  void initPixelGrid() {
+    
+    Picture p2 = new Picture("balloons.jpg");
+    
+    surroundedPixel = p2.topLeft.down.right.down.right;
+    surroundedPixel.up.right.color = new Color(5, 5, 5);
+    surroundedPixel.up.left.color = new Color(10, 10, 10);
+    surroundedPixel.up.color = new Color(15, 15, 15);
+    surroundedPixel.color = new Color(20, 20, 20);
+    surroundedPixel.right.color = new Color(30, 30, 30);
+    surroundedPixel.left.color =  new Color(40, 40, 40);
+    surroundedPixel.down.color = new Color(50, 50, 50);
+    surroundedPixel.down.right.color = new Color(60, 60, 60);
+    surroundedPixel.down.left.color = new Color(100, 50, 0);
+  }
+  
 
   // Runs the Seam Removal Program
   void testWorld(Tester t) {
@@ -352,6 +372,7 @@ class ExamplesSqueeze {
   void testOnTick(Tester t) {
 
     this.initTestConditions();
+    this.initPixelGrid();
 
     int initWidth = p.width;
     p.onTick();
@@ -365,7 +386,40 @@ class ExamplesSqueeze {
     p.onTick();
     updatedWidth = p.width;
     t.checkExpect(initWidth - 1, updatedWidth);
-
+  }
+  
+  // tests the updateSeams method in the Picture class
+  void testUpdateSeams(Tester t) {
+    this.initTestConditions();
+    ArrayList<ArrayList<SeamInfo>> seamTestArr = new ArrayList<ArrayList<SeamInfo>>();
+    
+    // tests that the seam array has nothing in it initially
+    t.checkExpect(seamTestArr.size(), 0);
+    
+    p3.updateSeams(seamTestArr);
+    
+    // tests the expected changes within the seam array
+    t.checkInexact(seamTestArr.get(0).get(0), new SeamInfo(p3.topLeft.right.down, 0.438444, null), 
+        .001);
+    t.checkInexact(seamTestArr.get(0).get(1), 
+        new SeamInfo(p3.topLeft.right.down.right, 0.438444, null), 
+        .001);
+    t.checkInexact(seamTestArr.get(0).get(2), 
+        new SeamInfo(p3.topLeft.right.down.right.right, 0.36996004, null), 
+        .001);
+    t.checkInexact(seamTestArr.get(1).get(0), 
+        new SeamInfo(p3.topLeft.right.down.down, 0.6106828040, 
+            new SeamInfo(p3.topLeft.right.down, 0.438444, null)), 
+        .001);
+    t.checkInexact(seamTestArr.get(1).get(1), 
+        new SeamInfo(p3.topLeft.right.down.down.right, 0.649727118658, 
+            new SeamInfo(p3.topLeft.right.down.right.right, 0.36996004, null)), 
+        .001);
+  }
+  
+  // test the removeSeam method in the Picture class
+  void testRemoveSeam(Tester t) {
+    
   }
 
   // Check the pixel removal functionality
@@ -397,25 +451,9 @@ class ExamplesSqueeze {
 
   }
   
-  APixel surroundedPixel;
   
-  // initializes a pixel grid
-  void initPixelGrid() {
-    
-    Picture p2 = new Picture("balloons.jpg");
-    
-    surroundedPixel = p2.topLeft.down.right.down.right;
-    
-    surroundedPixel.up.right.color = Color.red;
-    surroundedPixel.up.left.color = Color.blue;
-    surroundedPixel.up.color = Color.white;
-    surroundedPixel.color = Color.green;
-    surroundedPixel.right.color = Color.pink;
-    surroundedPixel.left.color = Color.red;
-    surroundedPixel.down.color = Color.DARK_GRAY;
-    surroundedPixel.down.right.color = Color.CYAN;
-    surroundedPixel.down.left.color = Color.black;
-  }
+  
+
   
   // test the energy calculation for a pixel's surroundings. 
   // this includes tests for all three methods calculateHorizEnergy, calculateVertEnergy, 
@@ -430,7 +468,10 @@ class ExamplesSqueeze {
     
     initPixelGrid();
     
-    t.checkExpect(surroundedPixel.calculateEnergy(), 1.0);
+    t.checkInexact(surroundedPixel.calculateHorizEnergy(), 0.0588, 0.01);
+    t.checkInexact(surroundedPixel.calculateVertEnergy(), -0.647, 0.01);
+    t.checkInexact(surroundedPixel.calculateEnergy(), Math.sqrt(Math.pow(0.0588, 2) 
+        + Math.pow(-0.647, 2)), 0.01);
     
     System.out.println("\n");
     System.out.println(surroundedPixel.color);
