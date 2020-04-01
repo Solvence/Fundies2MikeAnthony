@@ -402,19 +402,19 @@ class ExamplesSqueeze {
   // initializes a pixel grid
   void initPixelGrid() {
     
-    Picture p2 = new Picture("balloons");
+    Picture p2 = new Picture("balloons.jpg");
     
     surroundedPixel = p2.topLeft.down.down.right.right.right.right.right;
     
-    surroundedPixel.up.right.color = Color.red;
-    surroundedPixel.up.left.color = Color.blue;
-    surroundedPixel.up.color = Color.white;
-    surroundedPixel.color = Color.green;
-    surroundedPixel.right.color = Color.pink;
-    surroundedPixel.left.color = Color.red;
-    surroundedPixel.down.color = Color.DARK_GRAY;
-    surroundedPixel.down.right.color = Color.CYAN;
-    surroundedPixel.down.left.color = Color.white;
+    surroundedPixel.up.right.color = new Color(5, 5, 5);
+    surroundedPixel.up.left.color = new Color(10, 10, 10);
+    surroundedPixel.up.color = new Color(15, 15, 15);
+    surroundedPixel.color = new Color(20, 20, 20);
+    surroundedPixel.right.color = new Color(30, 30, 30);
+    surroundedPixel.left.color =  new Color(40, 40, 40);
+    surroundedPixel.down.color = new Color(50, 50, 50);
+    surroundedPixel.down.right.color = new Color(60, 60, 60);
+    surroundedPixel.down.left.color = new Color(100, 50, 0);
 
     
   }
@@ -430,7 +430,9 @@ class ExamplesSqueeze {
     
     initPixelGrid();
     
-    t.checkExpect(surroundedPixel.calculateEnergy(), 1.0);
+    t.checkInexact(surroundedPixel.calculateHorizEnergy(), 0.0588, 0.01);
+    t.checkInexact(surroundedPixel.calculateVertEnergy(), -0.647, 0.01);
+    t.checkInexact(surroundedPixel.calculateEnergy(), Math.sqrt(Math.pow(0.0588, 2) + Math.pow(-0.647, 2)), 0.01);
     
     System.out.println("\n");
     System.out.println(surroundedPixel.color);
