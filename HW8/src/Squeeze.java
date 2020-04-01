@@ -268,6 +268,11 @@ class SentinelPixel extends APixel {
 
     this.color = Color.BLACK;
   }
+  
+  @Override
+  void highlight() {
+    // Do not highlight this pixel, since it's not on the screen
+  }
 }
 
 // Represents a Pixel in a Grid of Pixels 
@@ -306,9 +311,12 @@ class PixelGrid extends World {
 
 // Examples class for testing
 class ExamplesSqueeze {
+  
 
   // TODO test field of field on pixel neighbors
   Picture p = new Picture("balloons.jpg");
+  
+  APixel surroundedPixel = new Pixel();
 
   // Initializes conditiosn for testing
   void initTestConditions() {
@@ -318,7 +326,7 @@ class ExamplesSqueeze {
   // Runs the Seam Removal Program
   void testWorld(Tester t) {
     initTestConditions();
-    p.bigBang(800, 343, 1.0 / 28);
+//    p.bigBang(800, 343, 1.0 / 28);
   }
 
   /*
@@ -326,26 +334,23 @@ class ExamplesSqueeze {
    * 
    * calculateBrightness - Brightness is correctly calculated
    * 
-   * highlight - Highlighted pixels have their colors properly changed to red
-   * Highlighted pixels do not effect the energy computation of the rest of the
-   * picture. (Can be demonstrated by running with different highlight colors and
-   * checking to see if resulting image at different iteration counts is constant
-   * ) Sentinel Pixels should not be highlighted as they should be black for
-   * calculations
+   * highlight - Highlighted pixels have their colors properly changed to red *
+   * Sentinel Pixels should not be highlighted as they should be black for *
+   * calculations *
    * 
-   * calculateEnergy - Horizontal Energy is correctly computed Vertical Energy is
-   * correctly computed Total energy is correctly computed from Horizontal and
-   * vertical energy Energy works with both SentinelPixels and Normal Pixels
+   * calculateEnergy - Horizontal Energy is correctly computed *
+   * Vertical Energy is correctly computed Total energy is correctly *
+   * computed from Horizontal and vertical energy *
+   * Energy works with both SentinelPixels and Normal Pixels *
    * (Sentinel Pixels treated as black)
    * 
-   * Remove - Remove correctly modifies the references of the surrounding pixels
-   * Removing a sentinel doesn't do anything When all pixels are removed the
-   * sentinel refers to itself in all four directions ???
+   * Remove - Remove correctly modifies the references of the surrounding pixels * 
+   * Removing a sentinel doesn't do anything *
    * 
    * On Tick -
    * 
-   * The world ends when width is less than or equal to 1 The world's width
-   * decreases every other tick
+   * The world ends when width is less than or equal to 1 *
+   * The world's width decreases every other tick *
    */
 
   // Check the On Tick Functionality 
@@ -374,10 +379,15 @@ class ExamplesSqueeze {
     APixel sp2 = new SentinelPixel();
     sp.remove();
     t.checkExpect(sp, sp2);
-//    
-//    APixel pixel = new Pixel(sp, sp, sp, sp, Color.DARK_GRAY);
-//    pixel.remove();
-//    t.checkExpect(pixel, sp);
+    
+    initPixelGrid();
+    
+    surroundedPixel.remove();
+    
+    t.checkExpect(surroundedPixel.left.right, surroundedPixel.right);
+    t.checkExpect(surroundedPixel.right.left, surroundedPixel.left);
+    t.checkExpect(surroundedPixel.up.down, surroundedPixel.down);
+    t.checkExpect(surroundedPixel.down.up, surroundedPixel.up);
 
   }
 
@@ -397,7 +407,25 @@ class ExamplesSqueeze {
 
   }
   
-  APixel surroundedPixel = new Pixel();
+  void testHighlight(Tester t) {
+    
+    initPixelGrid();
+    
+    surroundedPixel.highlight();
+    
+    t.checkExpect(surroundedPixel.color, Color.red);
+    
+    SentinelPixel p = new SentinelPixel();
+    
+    SentinelPixel p2 = new SentinelPixel();
+    
+    p.highlight();
+    
+    t.checkExpect(p, p2);
+    
+    
+    
+  }
   
   // initializes a pixel grid
   void initPixelGrid() {
@@ -430,9 +458,15 @@ class ExamplesSqueeze {
     
     initPixelGrid();
     
+    // Horizontal energy correctly computed
     t.checkInexact(surroundedPixel.calculateHorizEnergy(), 0.0588, 0.01);
+    // Vertical Energy correctly computed
     t.checkInexact(surroundedPixel.calculateVertEnergy(), -0.647, 0.01);
-    t.checkInexact(surroundedPixel.calculateEnergy(), Math.sqrt(Math.pow(0.0588, 2) + Math.pow(-0.647, 2)), 0.01);
+    // Total Energy correctly computed 
+    t.checkInexact(surroundedPixel.calculateEnergy(),
+        Math.sqrt(Math.pow(0.0588, 2) + Math.pow(-0.647, 2)), 0.01);
+    // Energy works with sentinel pixels on edges
+    t.checkInexact(surroundedPixel.left.calculateEnergy(), 1.1930, 0.01);
     
     System.out.println("\n");
     System.out.println(surroundedPixel.color);
