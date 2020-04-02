@@ -101,7 +101,8 @@ class Picture extends World {
   // to be removed the next time onTick is called. 
   // EFFECT: if the seam is being removed on this tick, modifies the pixels in this picture to
   // exclude the pixels being removed, and modifies the seamToRemove seam field to have a null
-  // cameFrom field (to let the next tick know that the seam has already been removed)
+  // cameFrom field (to let the next tick know that the seam has already been removed), and width is
+  // reduced by one.
   // if the seam is being highlighted on this tick, modifies the pixels in the seam to have a red
   // color, and modifies the seamToRemove field to contain the seam to be removed in the next tick
   public void onTick() {
@@ -133,6 +134,7 @@ class Picture extends World {
         seamToHighlight.thisPixel.highlight();
         seamToHighlight = seamToHighlight.cameFrom;
       }
+      seamToHighlight.thisPixel.highlight();
     }
   }
   
@@ -141,14 +143,14 @@ class Picture extends World {
   // Picture to account for the removed seam
   void removeSeam() {
     APixel currentPixel = this.seamToRemove.thisPixel;
-    currentPixel.down.remove();
     while (this.seamToRemove.cameFrom != null) {
       currentPixel = this.seamToRemove.thisPixel;
       currentPixel.remove();
       this.seamToRemove = this.seamToRemove.cameFrom;
     }
-    currentPixel.remove();
-    currentPixel.up.remove();
+    this.seamToRemove.thisPixel.up.remove();
+    this.seamToRemove.thisPixel.remove();
+    
     width -= 1;
   }
   
@@ -268,6 +270,11 @@ class SentinelPixel extends APixel {
 
     this.color = Color.BLACK;
   }
+  
+  @Override
+  void highlight() {
+    // Do not highlight this pixel, since it's not on the screen
+  }
 }
 
 // Represents a Pixel in a Grid of Pixels 
@@ -306,6 +313,7 @@ class PixelGrid extends World {
 
 // Examples class for testing
 class ExamplesSqueeze {
+  
 
   // TODO test field of field on pixel neighbors
   Picture p;
@@ -346,46 +354,103 @@ class ExamplesSqueeze {
    * 
    * calculateBrightness - Brightness is correctly calculated
    * 
-   * highlight - Highlighted pixels have their colors properly changed to red
-   * Highlighted pixels do not effect the energy computation of the rest of the
-   * picture. (Can be demonstrated by running with different highlight colors and
-   * checking to see if resulting image at different iteration counts is constant
-   * ) Sentinel Pixels should not be highlighted as they should be black for
-   * calculations
+   * highlight - Highlighted pixels have their colors properly changed to red *
+   * Sentinel Pixels should not be highlighted as they should be black for *
+   * calculations *
    * 
-   * calculateEnergy - Horizontal Energy is correctly computed Vertical Energy is
-   * correctly computed Total energy is correctly computed from Horizontal and
-   * vertical energy Energy works with both SentinelPixels and Normal Pixels
+   * calculateEnergy - Horizontal Energy is correctly computed *
+   * Vertical Energy is correctly computed Total energy is correctly *
+   * computed from Horizontal and vertical energy *
+   * Energy works with both SentinelPixels and Normal Pixels *
    * (Sentinel Pixels treated as black)
    * 
-   * Remove - Remove correctly modifies the references of the surrounding pixels
-   * Removing a sentinel doesn't do anything When all pixels are removed the
-   * sentinel refers to itself in all four directions ???
+   * Remove - Remove correctly modifies the references of the surrounding pixels * 
+   * Removing a sentinel doesn't do anything *
    * 
    * On Tick -
    * 
-   * The world ends when width is less than or equal to 1 The world's width
-   * decreases every other tick
+   * The world ends when width is less than or equal to 1 *
+   * The world's width decreases every other tick *
    */
 
+  // tests the makeScene method in the Picture class
+  void testMakeScene(Tester t) {
+    this.initTestConditions();
+    
+    WorldScene ws = new WorldScene(3, 3);
+    ComputedPixelImage cpi = new ComputedPixelImage(3, 3);
+    APixel nextRowPixel = p3.topLeft;
+    for (int row = 0; row < 3; row += 1) {
+      nextRowPixel = nextRowPixel.down;
+      APixel nextPixel = nextRowPixel.right;
+      for (int col = 0; col < 3; col += 1) {
+        cpi.setPixel(col, row, nextPixel.color);
+        nextPixel = nextPixel.right;
+      }
+    }
+    ws.placeImageXY(cpi, 1, 1);
+    
+    WorldScene ws2 = new WorldScene(800, 343);
+    cpi = new ComputedPixelImage(800, 343);
+    nextRowPixel = p.topLeft;
+    for (int row = 0; row < 343; row += 1) {
+      nextRowPixel = nextRowPixel.down;
+      APixel nextPixel = nextRowPixel.right;
+      for (int col = 0; col < 800; col += 1) {
+        cpi.setPixel(col, row, nextPixel.color);
+        nextPixel = nextPixel.right;
+      }
+    }
+    ws2.placeImageXY(cpi, 400, 171);
+    
+    t.checkExpect(p3.makeScene(), ws);
+    t.checkExpect(p.makeScene(), ws2);
+  }
+  
   // Check the On Tick Functionality 
   void testOnTick(Tester t) {
-
     this.initTestConditions();
-    this.initPixelGrid();
-
-    int initWidth = p.width;
-    p.onTick();
-    int updatedWidth = p.width;
-    // Width is not updated on the first tick
-    t.checkExpect(initWidth, updatedWidth);
-
-    // Width is updated on second tick
-    this.initTestConditions();
-    p.onTick();
-    p.onTick();
-    updatedWidth = p.width;
-    t.checkExpect(initWidth - 1, updatedWidth);
+    
+    t.checkExpect(p3.topLeft.down.right.color, new Color(10, 10, 10));
+    t.checkExpect(p3.topLeft.down.right.right.color, new Color(15, 15, 15));
+    t.checkExpect(p3.topLeft.down.right.right.right.color, new Color(5, 5, 5));
+    t.checkExpect(p3.topLeft.down.right.down.color, new Color(40, 40, 40));
+    t.checkExpect(p3.topLeft.down.right.down.right.color, new Color(20, 20, 20));
+    t.checkExpect(p3.topLeft.down.right.down.right.right.color, new Color(30, 30, 30));
+    t.checkExpect(p3.topLeft.down.right.down.down.color, new Color(100, 50, 0));
+    t.checkExpect(p3.topLeft.down.right.down.down.right.color, new Color(50, 50, 50));
+    t.checkExpect(p3.topLeft.down.right.down.down.right.right.color, new Color(60, 60, 60));
+    t.checkExpect(p3.width, 3);
+    t.checkExpect(p3.seamToRemove, null);
+    
+    p3.onTick();
+    
+    t.checkExpect(p3.topLeft.down.right.color, new Color(255, 0, 0));
+    t.checkExpect(p3.topLeft.down.right.right.color, new Color(15, 15, 15));
+    t.checkExpect(p3.topLeft.down.right.right.right.color, new Color(5, 5, 5));
+    t.checkExpect(p3.topLeft.down.right.down.color, new Color(255, 0, 0));
+    t.checkExpect(p3.topLeft.down.right.down.right.color, new Color(20, 20, 20));
+    t.checkExpect(p3.topLeft.down.right.down.right.right.color, new Color(30, 30, 30));
+    t.checkExpect(p3.topLeft.down.right.down.down.color, new Color(100, 50, 0));
+    t.checkExpect(p3.topLeft.down.right.down.down.right.color, new Color(255, 0, 0));
+    t.checkExpect(p3.topLeft.down.right.down.down.right.right.color, new Color(60, 60, 60));
+    t.checkExpect(p3.width, 3);
+    t.checkInexact(p3.seamToRemove, new SeamInfo(p3.topLeft.down.right.down.down.right, 0.43315141, 
+        new SeamInfo(p3.topLeft.down.right.down, 0.6106828, 
+            new SeamInfo(p3.topLeft.down.right, 0.4384447, null))), .001);
+    
+    APixel topLeftPixel = p3.topLeft.down.right;
+    
+    p3.onTick();
+    
+    t.checkExpect(p3.topLeft.down.right.color, new Color(15, 15, 15));
+    t.checkExpect(p3.topLeft.down.right.right.color, new Color(5, 5, 5));
+    t.checkExpect(p3.topLeft.down.right.down.color, new Color(20, 20, 20));
+    t.checkExpect(p3.topLeft.down.right.down.right.color, new Color(30, 30, 30));
+    t.checkExpect(p3.topLeft.down.down.down.right.color, new Color(100, 50, 0));
+    t.checkExpect(p3.topLeft.down.down.down.right.right.color, new Color(60, 60, 60));
+    t.checkExpect(p3.width, 2);
+    t.checkInexact(p3.seamToRemove, new SeamInfo(topLeftPixel, 0.4384447, null), .001);
   }
   
   // tests the updateSeams method in the Picture class
@@ -419,7 +484,33 @@ class ExamplesSqueeze {
   
   // test the removeSeam method in the Picture class
   void testRemoveSeam(Tester t) {
+    this.initTestConditions();
     
+    t.checkExpect(p3.topLeft.down.right.color, new Color(10, 10, 10));
+    t.checkExpect(p3.topLeft.down.right.right.color, new Color(15, 15, 15));
+    t.checkExpect(p3.topLeft.down.right.right.right.color, new Color(5, 5, 5));
+    t.checkExpect(p3.topLeft.down.right.down.color, new Color(40, 40, 40));
+    t.checkExpect(p3.topLeft.down.right.down.right.color, new Color(20, 20, 20));
+    t.checkExpect(p3.topLeft.down.right.down.right.right.color, new Color(30, 30, 30));
+    t.checkExpect(p3.topLeft.down.right.down.down.color, new Color(100, 50, 0));
+    t.checkExpect(p3.topLeft.down.right.down.down.right.color, new Color(50, 50, 50));
+    t.checkExpect(p3.topLeft.down.right.down.down.right.right.color, new Color(60, 60, 60));
+    t.checkExpect(p3.width, 3);
+    t.checkExpect(p3.seamToRemove, null);
+    
+    p3.seamToRemove = new SeamInfo(p3.topLeft.down.right.down.down.right, 0.43315141, 
+        new SeamInfo(p3.topLeft.down.right.down, 0.6106828, 
+            new SeamInfo(p3.topLeft.down.right, 0.4384447, null)));
+    
+    p3.removeSeam();
+    
+    t.checkExpect(p3.topLeft.down.right.color, new Color(15, 15, 15));
+    t.checkExpect(p3.topLeft.down.right.right.color, new Color(5, 5, 5));
+    t.checkExpect(p3.topLeft.down.right.down.color, new Color(20, 20, 20));
+    t.checkExpect(p3.topLeft.down.right.down.right.color, new Color(30, 30, 30));
+    t.checkExpect(p3.topLeft.down.down.down.right.color, new Color(100, 50, 0));
+    t.checkExpect(p3.topLeft.down.down.down.right.right.color, new Color(60, 60, 60));
+    t.checkExpect(p3.width, 2);
   }
 
   // Check the pixel removal functionality
@@ -428,10 +519,15 @@ class ExamplesSqueeze {
     APixel sp2 = new SentinelPixel();
     sp.remove();
     t.checkExpect(sp, sp2);
-//    
-//    APixel pixel = new Pixel(sp, sp, sp, sp, Color.DARK_GRAY);
-//    pixel.remove();
-//    t.checkExpect(pixel, sp);
+    
+    this.initPixelGrid();
+    
+    surroundedPixel.remove();
+    
+    t.checkExpect(surroundedPixel.left.right, surroundedPixel.right);
+    t.checkExpect(surroundedPixel.right.left, surroundedPixel.left);
+    t.checkExpect(surroundedPixel.up.down, surroundedPixel.down);
+    t.checkExpect(surroundedPixel.down.up, surroundedPixel.up);
 
   }
 
@@ -451,6 +547,25 @@ class ExamplesSqueeze {
 
   }
   
+  void testHighlight(Tester t) {
+    
+    initPixelGrid();
+    
+    surroundedPixel.highlight();
+    
+    t.checkExpect(surroundedPixel.color, Color.red);
+    
+    SentinelPixel p = new SentinelPixel();
+    
+    SentinelPixel p2 = new SentinelPixel();
+    
+    p.highlight();
+    
+    t.checkExpect(p, p2);
+    
+    
+    
+  }
   
   
 
@@ -468,14 +583,16 @@ class ExamplesSqueeze {
     
     initPixelGrid();
     
+    // Horizontal energy correctly computed
     t.checkInexact(surroundedPixel.calculateHorizEnergy(), 0.0588, 0.01);
+    // Vertical Energy correctly computed
     t.checkInexact(surroundedPixel.calculateVertEnergy(), -0.647, 0.01);
     t.checkInexact(surroundedPixel.calculateEnergy(), Math.sqrt(Math.pow(0.0588, 2) 
         + Math.pow(-0.647, 2)), 0.01);
-    
-    System.out.println("\n");
-    System.out.println(surroundedPixel.color);
-    System.out.println(surroundedPixel.right.color);
-    System.out.println(surroundedPixel.left.color);
+    // Total Energy correctly computed 
+    t.checkInexact(surroundedPixel.calculateEnergy(),
+        Math.sqrt(Math.pow(0.0588, 2) + Math.pow(-0.647, 2)), 0.01);
+    // Energy works with sentinel pixels on edges
+    t.checkInexact(surroundedPixel.left.calculateEnergy(), 0.610682, 0.01);
   }
 }
