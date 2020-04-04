@@ -29,6 +29,43 @@ class SeamInfo {
   }
 }
 
+interface IMode {
+  boolean isRandom();
+  boolean isHorizontal();
+  boolean isVertical();
+}
+
+abstract class AMode implements IMode {
+  public boolean isRandom() {
+    return false;
+  }
+  public boolean isHorizontal() {
+    return false;
+  }
+  public boolean isVertical() {
+    return false;
+  }
+  
+}
+
+class RandomMode extends AMode {
+  public boolean isRandom() {
+    return true;
+  }
+}
+
+class VerticalMode extends AMode {
+  public boolean isVertical() {
+    return true;
+  }
+}
+
+class HorizontalMode extends AMode {
+  public boolean isHorizontal() {
+    return true;
+  }
+}
+
 // Represents the world state of a Picture being compressed
 class Picture extends World {
   APixel topLeft;  // the top left SentinelPixel of this picture. It is the actual top left pixel's
@@ -39,7 +76,7 @@ class Picture extends World {
   boolean isRemoving;// currently, is either null or has a null cameFrom
   boolean showEnergies;
   boolean isVertical;
-  String mode;
+  IMode mode;
 
   // Constructs a Picture and Transforms it into a 2D pixel deque that can be used for seam removal.
   Picture(String imgFileName) {
@@ -49,7 +86,7 @@ class Picture extends World {
     this.isRemoving = true;
     this.showEnergies = false;
     this.isVertical = false;
-    this.mode = "Random";
+    this.mode = new RandomMode();
     topLeft = new SentinelPixel();
     APixel prevRowPixel = topLeft;
     for (int row = 0; row < img.getHeight(); row += 1) {
@@ -132,12 +169,12 @@ class Picture extends World {
 
     if (this.seamToRemove != null && this.seamToRemove.cameFrom != null) {
       this.removeSeam();
-      if (this.mode.equals("Random")) {
+      if (this.mode.isRandom()) {
         Random r = new Random();
         this.isVertical = r.nextBoolean();
-      } else if (this.mode.equals("Vertical")) {
+      } else if (this.mode.isVertical()) {
         this.isVertical = true;
-      } else if (this.mode.equals("Horizontal")) {
+      } else if (this.mode.isHorizontal()) {
         this.isVertical = false;
       }
     } else {
@@ -181,11 +218,11 @@ class Picture extends World {
     } else if (key.equals("b")){
       this.showEnergies = !this.showEnergies;
     } else if (key.equals("r")) {
-      this.mode = "Random";
+      this.mode = new RandomMode();
     } else if (key.equals("h")) {
-      this.mode = "Horizontal";
+      this.mode = new HorizontalMode();
     } else if (key.equals("v")) {
-      this.mode = "Vertical";
+      this.mode = new VerticalMode();
     }
   }
   
