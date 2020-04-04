@@ -76,6 +76,7 @@ class Picture extends World {
   boolean isRemoving;// currently, is either null or has a null cameFrom
   boolean showEnergies;
   boolean isVertical;
+  boolean showSeamWeights;
   IMode mode;
 
   // Constructs a Picture and Transforms it into a 2D pixel deque that can be used for seam removal.
@@ -86,6 +87,7 @@ class Picture extends World {
     this.isRemoving = true;
     this.showEnergies = false;
     this.isVertical = false;
+    this.showSeamWeights = false;
     this.mode = new RandomMode();
     topLeft = new SentinelPixel();
     APixel prevRowPixel = topLeft;
@@ -127,6 +129,18 @@ class Picture extends World {
 
     ComputedPixelImage cpi = new ComputedPixelImage(this.width, this.height);
     APixel nextRowPixel = topLeft;
+    ArrayList<ArrayList<SeamInfo>> seams = new ArrayList<ArrayList<SeamInfo>>();
+    this.updateSeams(seams);
+    SeamInfo maxSeam = seams.get(0).get(0);
+    for (int row = 0; row < seams.size(); row += 1) {
+      for (int col = 0; col < seams.get(row).size(); col += 1) {
+        if (seams.get(row).get(col).totalWeight > maxSeam.totalWeight) {
+          maxSeam = seams.get(row).get(col);
+        }
+      }
+    }
+    float maxWeight = (float) maxSeam.totalWeight;
+    
     for (int row = 0; row < this.height; row += 1) {
       nextRowPixel = nextRowPixel.down;
       APixel nextPixel = nextRowPixel.right;
@@ -134,8 +148,15 @@ class Picture extends World {
         Color c = nextPixel.color;
         if (this.showEnergies) {
           float energy = (float) nextPixel.calculateEnergy();
-          //System.out.println(energy);
           c = new Color(energy / 4, energy / 4, energy / 4);
+        } else if (this.showSeamWeights) {
+          if (this.isVertical) {
+            float thisWeight = (float) seams.get(row).get(col).totalWeight;
+            c = new Color(thisWeight / maxWeight, thisWeight / maxWeight, thisWeight / maxWeight);
+          } else {
+            float thisWeight = (float) seams.get(col).get(row).totalWeight;
+            c = new Color(thisWeight / maxWeight, thisWeight / maxWeight, thisWeight / maxWeight);
+          }
         }
         cpi.setPixel(col, row, c);
         nextPixel = nextPixel.right;
@@ -217,12 +238,16 @@ class Picture extends World {
       this.isRemoving = !this.isRemoving;
     } else if (key.equals("b")){
       this.showEnergies = !this.showEnergies;
+      this.showSeamWeights = false;
     } else if (key.equals("r")) {
       this.mode = new RandomMode();
     } else if (key.equals("h")) {
       this.mode = new HorizontalMode();
     } else if (key.equals("v")) {
       this.mode = new VerticalMode();
+    } else if (key.equals("s")) {
+      this.showEnergies = false;
+      this.showSeamWeights = !this.showSeamWeights;
     }
   }
   
@@ -298,18 +323,17 @@ class Picture extends World {
             cameFrom = seams.get(d1 - 1).get(d2 + 1);
           }
 
-          seams.get(d1).add(new SeamInfo(nextPixel, nextPixel.calculateEnergy(), cameFrom));
+          seams.get(d1).add(new SeamInfo(nextPixel, 
+              cameFrom.totalWeight + nextPixel.calculateEnergy(), cameFrom));
         }
         if (this.isVertical) {
           nextPixel = nextPixel.right;
         } else {
           nextPixel = nextPixel.down;
         }
-
       }
     }
   }
-  
 }
 
 // Represents a pixel
