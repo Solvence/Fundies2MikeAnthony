@@ -36,6 +36,7 @@ class Picture extends World {
   SeamInfo seamToRemove; // the seam to remove in the current tick. If there is no seam to remove
   boolean isRemoving;// currently, is either null or has a null cameFrom
   boolean showEnergies;
+  boolean isVertical;
 
   // Constructs a Picture and Transforms it into a 2D pixel deque that can be used for seam removal.
   Picture(String imgFileName) {
@@ -44,6 +45,7 @@ class Picture extends World {
     this.height = (int) img.getHeight();
     this.isRemoving = true;
     this.showEnergies = false;
+    this.isVertical = false;
     topLeft = new SentinelPixel();
     APixel prevRowPixel = topLeft;
     for (int row = 0; row < img.getHeight(); row += 1) {
@@ -116,7 +118,7 @@ class Picture extends World {
   // color, and modifies the seamToRemove field to contain the seam to be removed in the next tick
   public void onTick() {
 
-    if (this.width <= 1) {
+    if (this.width <= 1 || this.height <= 1) {
       this.endOfWorld("");
     }
     
@@ -130,11 +132,21 @@ class Picture extends World {
       ArrayList<ArrayList<SeamInfo>> seams = new ArrayList<ArrayList<SeamInfo>>();
       this.updateSeams(seams);
       
-      // finds the SeamInfo in the bottom row with the least total weight
-      SeamInfo seamToHighlight = seams.get(height - 1).get(0);
-      for (int col = 1; col < this.width; col += 1) {
-        if (seams.get(height - 1).get(col).totalWeight < seamToHighlight.totalWeight) {
-          seamToHighlight = seams.get(height - 1).get(col);
+      // finds the SeamInfo in the bottom row or rightmost column with the least total weight
+      int bound1; 
+      int bound2;
+      if (this.isVertical) {
+        bound1 = this.height;
+        bound2 = this.width;
+      } else {
+        bound1 = this.width;
+        bound2 = this.height;
+      }
+      
+      SeamInfo seamToHighlight = seams.get(bound1 - 1).get(0);
+      for (int d2 = 1; d2 < bound2; d2 += 1) {
+        if (seams.get(bound1 - 1).get(d2).totalWeight < seamToHighlight.totalWeight) {
+          seamToHighlight = seams.get(bound1 - 1).get(d2);
         }
       }
       
@@ -169,41 +181,69 @@ class Picture extends World {
       currentPixel.remove();
       this.seamToRemove = this.seamToRemove.cameFrom;
     }
-    this.seamToRemove.thisPixel.up.remove();
+    
+//    if (this.isVertical) {
+//      this.seamToRemove.thisPixel.up.remove();
+//      this.width -= 1;
+//    } else {
+//      this.seamToRemove.thisPixel.left.remove();
+//      this.height -= 1;
+//    }
+    this.seamToRemove.thisPixel.left.remove();
     this.seamToRemove.thisPixel.remove();
     
-    width -= 1;
+    this.height -= 1;
   }
   
   // fills the given 2D SeamInfo array with the proper SeamInfos from this Picture
   // EFFECT: modifies the given SeamInfo array to contain the corresponding SeamInfo for every pixel
   // in this Picture
   void updateSeams(ArrayList<ArrayList<SeamInfo>> seams) {
-    APixel nextRowPixel = topLeft;
-    for (int row = 0; row < this.height; row += 1) {
-      nextRowPixel = nextRowPixel.down;
-      APixel nextPixel = nextRowPixel.right;
+    int bound1; 
+    int bound2;
+    if (this.isVertical) {
+      bound1 = this.height;
+      bound2 = this.width;
+    } else {
+      bound1 = this.width;
+      bound2 = this.height;
+    }
+    
+    APixel nextD1Pixel = topLeft;
+    for (int d1 = 0; d1 < bound1; d1 += 1) {
+      nextD1Pixel = nextD1Pixel.right;
+      APixel nextPixel = nextD1Pixel.down;
+//      if(!this.isVertical) {
+//        nextD1Pixel = nextD1Pixel.up.right; // TODO Questionable
+//        nextPixel = nextD1Pixel.left.down;
+//      }
       seams.add(new ArrayList<SeamInfo>());
-      for (int col = 0; col < this.width; col += 1) {
-        if (row == 0) {
-          seams.get(row).add(new SeamInfo(nextPixel, nextPixel.calculateEnergy()));
+      for (int d2 = 0; d2 < bound2; d2 += 1) {
+        if (d1 == 0) {
+          seams.get(d1).add(new SeamInfo(nextPixel, nextPixel.calculateEnergy()));
         }
         else {
-          SeamInfo cameFrom = seams.get(row - 1).get(col);
-          if (col != 0 && seams.get(row - 1).get(col - 1).totalWeight < cameFrom.totalWeight) {
-            cameFrom = seams.get(row - 1).get(col - 1);
+          SeamInfo cameFrom = seams.get(d1 - 1).get(d2);
+          if (d2 != 0 && seams.get(d1 - 1).get(d2 - 1).totalWeight < cameFrom.totalWeight) {
+            cameFrom = seams.get(d1 - 1).get(d2 - 1);
           }
-          if (col != width - 1
-              && seams.get(row - 1).get(col + 1).totalWeight < cameFrom.totalWeight) {
-            cameFrom = seams.get(row - 1).get(col + 1);
+          if (d2 != bound2 - 1
+              && seams.get(d1 - 1).get(d2 + 1).totalWeight < cameFrom.totalWeight) {
+            cameFrom = seams.get(d1 - 1).get(d2 + 1);
           }
 
-          seams.get(row).add(new SeamInfo(nextPixel, nextPixel.calculateEnergy(), cameFrom));
+          seams.get(d1).add(new SeamInfo(nextPixel, nextPixel.calculateEnergy(), cameFrom));
         }
-        nextPixel = nextPixel.right;
+        if (this.isVertical) {
+          nextPixel = nextPixel.right;
+        } else {
+          nextPixel = nextPixel.down;
+        }
+
       }
     }
   }
+  
 }
 
 // Represents a pixel
@@ -367,7 +407,7 @@ class ExamplesSqueeze {
   // Runs the Seam Removal Program
   void testWorld(Tester t) {
     initTestConditions();
-    p.bigBang(800, 343, 1.0 / 28);
+    p.bigBang(800, 343, 1.0 / 1.0);
   }
 
   /*
