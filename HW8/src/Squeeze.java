@@ -1,4 +1,6 @@
 import java.util.ArrayList;
+import java.util.Random;
+
 import tester.*;
 import javalib.impworld.*;
 import javalib.worldimages.*;
@@ -37,6 +39,7 @@ class Picture extends World {
   boolean isRemoving;// currently, is either null or has a null cameFrom
   boolean showEnergies;
   boolean isVertical;
+  String mode;
 
   // Constructs a Picture and Transforms it into a 2D pixel deque that can be used for seam removal.
   Picture(String imgFileName) {
@@ -46,6 +49,7 @@ class Picture extends World {
     this.isRemoving = true;
     this.showEnergies = false;
     this.isVertical = false;
+    this.mode = "Random";
     topLeft = new SentinelPixel();
     APixel prevRowPixel = topLeft;
     for (int row = 0; row < img.getHeight(); row += 1) {
@@ -128,6 +132,14 @@ class Picture extends World {
 
     if (this.seamToRemove != null && this.seamToRemove.cameFrom != null) {
       this.removeSeam();
+      if (this.mode.equals("Random")) {
+        Random r = new Random();
+        this.isVertical = r.nextBoolean();
+      } else if (this.mode.equals("Vertical")) {
+        this.isVertical = true;
+      } else if (this.mode.equals("Horizontal")) {
+        this.isVertical = false;
+      }
     } else {
       ArrayList<ArrayList<SeamInfo>> seams = new ArrayList<ArrayList<SeamInfo>>();
       this.updateSeams(seams);
@@ -168,6 +180,12 @@ class Picture extends World {
       this.isRemoving = !this.isRemoving;
     } else if (key.equals("b")){
       this.showEnergies = !this.showEnergies;
+    } else if (key.equals("r")) {
+      this.mode = "Random";
+    } else if (key.equals("h")) {
+      this.mode = "Horizontal";
+    } else if (key.equals("v")) {
+      this.mode = "Vertical";
     }
   }
   
