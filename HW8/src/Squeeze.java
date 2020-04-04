@@ -292,25 +292,6 @@ class Pixel extends APixel {
 
 }
 
-// Helper class for creating grids of pixels without making a Picture
-// used for tests
-class PixelGrid extends World {
-  // Renders a grid of pixels, used for testing
-  public WorldScene makeScene() {
-    ComputedPixelImage cpi = new ComputedPixelImage(400, 400);
-    
-    cpi.setPixels(0, 0, 400, 400, Color.red);
-    
-    cpi.saveImage("redBoard.jpg");
-    
-    WorldScene ws = new WorldScene(400, 400);
-
-    ws.placeImageXY(cpi, 400 / 2, 400 / 2);
-    
-    return ws;
-  }
-}
-
 // Examples class for testing
 class ExamplesSqueeze {
   
@@ -325,6 +306,7 @@ class ExamplesSqueeze {
     p = new Picture("balloons.jpg");
     p3 = new Picture("3by3img.jpg");
   }
+  
   // initializes a pixel grid
   void initPixelGrid() {
     
