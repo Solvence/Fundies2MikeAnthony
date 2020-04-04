@@ -34,13 +34,16 @@ class Picture extends World {
   int width;
   int height;
   SeamInfo seamToRemove; // the seam to remove in the current tick. If there is no seam to remove
-  // currently, is either null or has a null cameFrom
+  boolean isRemoving;// currently, is either null or has a null cameFrom
+  boolean showEnergies;
 
   // Constructs a Picture and Transforms it into a 2D pixel deque that can be used for seam removal.
   Picture(String imgFileName) {
     FromFileImage img = new FromFileImage(imgFileName);
     this.width = (int) img.getWidth();
     this.height = (int) img.getHeight();
+    this.isRemoving = true;
+    this.showEnergies = false;
     topLeft = new SentinelPixel();
     APixel prevRowPixel = topLeft;
     for (int row = 0; row < img.getHeight(); row += 1) {
@@ -85,7 +88,13 @@ class Picture extends World {
       nextRowPixel = nextRowPixel.down;
       APixel nextPixel = nextRowPixel.right;
       for (int col = 0; col < this.width; col += 1) {
-        cpi.setPixel(col, row, nextPixel.color);
+        Color c = nextPixel.color;
+        if (this.showEnergies) {
+          float energy = (float) nextPixel.calculateEnergy();
+          //System.out.println(energy);
+          c = new Color(energy / 4, energy / 4, energy / 4);
+        }
+        cpi.setPixel(col, row, c);
         nextPixel = nextPixel.right;
       }
     }
@@ -109,6 +118,10 @@ class Picture extends World {
 
     if (this.width <= 1) {
       this.endOfWorld("");
+    }
+    
+    if (!this.isRemoving) {
+      return;
     }
 
     if (this.seamToRemove != null && this.seamToRemove.cameFrom != null) {
@@ -135,6 +148,14 @@ class Picture extends World {
         seamToHighlight = seamToHighlight.cameFrom;
       }
       seamToHighlight.thisPixel.highlight();
+    }
+  }
+  @Override
+  public void onKeyEvent(String key) {
+    if (key.equals(" ")) {
+      this.isRemoving = !this.isRemoving;
+    } else if (key.equals("b")){
+      this.showEnergies = !this.showEnergies;
     }
   }
   
