@@ -3,6 +3,7 @@ import java.util.Iterator;
 import java.util.Random;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.ArrayDeque;
 
 import tester.*;
 import javalib.impworld.*;
@@ -15,13 +16,17 @@ class Maze extends World {
   private final ArrayList<Edge> edgesInMaze;
   private final WorldScene mazeScene;
   private final int cellSize; // in pixels
+  private final ArrayList<Posn> squaresToColor;
+  private final HashMap<Posn, Color> squaresColored;
   
   Maze(int width, int height, Random r) {
     this.width = width;
     this.height = height;
+    this.squaresToColor = new ArrayList<Posn>();
+    this.squaresColored = new HashMap<Posn, Color>();
     
     this.cellSize = Math.min(1250 / this.width, 750 / this.height);
-    
+
     ArrayList<ArrayList<Posn>> mazeLocations = new ArrayList<ArrayList<Posn>>();
     for (int row = 0; row < height; row += 1) {
       mazeLocations.add(new ArrayList<Posn>());
@@ -66,6 +71,7 @@ class Maze extends World {
           mazeSceneInProgress.placeImageXY(WALL_H, col * this.cellSize + this.cellSize / 2, 
               (row + 1) * this.cellSize);
         }
+        
       }
     }
     
@@ -79,6 +85,92 @@ class Maze extends World {
   public WorldScene makeScene() {
     return this.mazeScene;
   }
+  
+  public void onTick() {
+    
+    if (this.squaresToColor.size() > 0) {
+      Posn nextCell = this.squaresToColor.remove(0);
+      this.mazeScene.placeImageXY(new RectangleImage(this.cellSize - 2,
+          this.cellSize - 2, OutlineMode.SOLID, Color.BLUE),
+          nextCell.x * this.cellSize + this.cellSize / 2, nextCell.y * cellSize + this.cellSize / 2);
+    }
+    
+  }
+  
+  public void onKeyEvent(String key) {
+    
+    if (key.equals("b")) {
+      this.searchMaze(true);
+    }
+     
+  }
+  
+  ArrayList<Posn> searchMaze(boolean BFS) {
+    
+    HashMap<Posn, ArrayList<Posn>> mazeMap = new HashMap<Posn, ArrayList<Posn>>();
+    
+    for (Edge edge : this.edgesInMaze) {
+      if (mazeMap.get(edge.src) == null) {
+        ArrayList<Posn> pathsFromPosn = new ArrayList<Posn>();
+        pathsFromPosn.add(edge.dest);
+        mazeMap.put(edge.src, pathsFromPosn);
+      } else {
+        mazeMap.get(edge.src).add(edge.dest);
+      }
+      
+      if (mazeMap.get(edge.dest) == null) {
+        ArrayList<Posn> pathsFromPosn = new ArrayList<Posn>();
+        pathsFromPosn.add(edge.src);
+        mazeMap.put(edge.dest, pathsFromPosn);
+      } else {
+        mazeMap.get(edge.dest).add(edge.src);
+      }
+    }
+    
+    ArrayDeque<Posn> worklist = new ArrayDeque<Posn>(); // A Queue or a Stack, depending on the algorithm
+    worklist.add(new Posn(0,0));
+    
+    HashMap<Posn, Boolean> visitedCells = new HashMap<Posn, Boolean>();
+    HashMap<Posn, Posn> cameFromPosn = new HashMap<Posn, Posn>();
+    
+    //BFS
+    while (worklist.size() > 0) {
+      
+      Posn nextItem = worklist.getFirst();
+      worklist.removeFirst();
+      
+      if (nextItem.equals(new Posn(this.width - 1, this.height - 1))){
+        squaresToColor.add(nextItem);
+        return this.reconstruct(cameFromPosn, nextItem);
+      } else if (visitedCells.get(nextItem) == null) {
+        squaresToColor.add(nextItem);
+        visitedCells.put(nextItem, true);
+        ArrayList<Posn> neighbors = mazeMap.get(nextItem);
+        for (Posn neighbor : neighbors) {
+          cameFromPosn.put(neighbor, nextItem);
+          worklist.addLast(neighbor);
+        }
+        
+      } 
+      
+    }
+    
+    throw new RuntimeException("No Path Found");
+     
+  }
+  
+  ArrayList<Posn> reconstruct(HashMap<Posn, Posn> cameFromPosn, Posn nextItem){
+    ArrayList<Posn> steps = new ArrayList<Posn>();
+    Posn currPosition = nextItem;
+    while(currPosition != new Posn(0,0)) {
+      steps.add(new Posn(currPosition.x, currPosition.y));
+      currPosition = cameFromPosn.get(currPosition);
+    }
+    
+    return steps;
+  }
+  
+  
 }
 
 class SpanningTree {
