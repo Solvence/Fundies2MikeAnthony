@@ -17,13 +17,13 @@ class Maze extends World {
   private final WorldScene mazeScene;
   private final int cellSize; // in pixels
   private final ArrayList<Posn> squaresToColor;
-  private final HashMap<Posn, Color> squaresColored;
+  private final ArrayList<Posn> finalPath;
   
   Maze(int width, int height, Random r) {
     this.width = width;
     this.height = height;
     this.squaresToColor = new ArrayList<Posn>();
-    this.squaresColored = new HashMap<Posn, Color>();
+    finalPath = new ArrayList<Posn>();
     
     this.cellSize = Math.min(1250 / this.width, 750 / this.height);
 
@@ -87,22 +87,27 @@ class Maze extends World {
   }
   
   public void onTick() {
-    
     if (this.squaresToColor.size() > 0) {
       Posn nextCell = this.squaresToColor.remove(0);
       this.mazeScene.placeImageXY(new RectangleImage(this.cellSize - 2,
+          this.cellSize - 2, OutlineMode.SOLID, Color.CYAN),
+          nextCell.x * this.cellSize + this.cellSize / 2, 
+          nextCell.y * cellSize + this.cellSize / 2);
+    } else if (!this.finalPath.isEmpty()) {
+      Posn nextCell = this.finalPath.remove(0);
+      this.mazeScene.placeImageXY(new RectangleImage(this.cellSize - 2,
           this.cellSize - 2, OutlineMode.SOLID, Color.BLUE),
-          nextCell.x * this.cellSize + this.cellSize / 2, nextCell.y * cellSize + this.cellSize / 2);
+          nextCell.x * this.cellSize + this.cellSize / 2, 
+          nextCell.y * cellSize + this.cellSize / 2);
     }
-    
   }
   
   public void onKeyEvent(String key) {
-    
     if (key.equals("b")) {
       this.searchMaze(true);
+    } else if (key.equals("d")) {
+      this.searchMaze(false);
     }
-     
   }
   
   ArrayList<Posn> searchMaze(boolean BFS) {
@@ -147,13 +152,18 @@ class Maze extends World {
         visitedCells.put(nextItem, true);
         ArrayList<Posn> neighbors = mazeMap.get(nextItem);
         for (Posn neighbor : neighbors) {
-          cameFromPosn.put(neighbor, nextItem);
-          worklist.addLast(neighbor);
+          if (visitedCells.get(neighbor) == null) {
+            cameFromPosn.put(neighbor, nextItem);
+            if (BFS) {
+              worklist.addLast(neighbor);
+            } else {
+              worklist.addFirst(neighbor);
+            }
+          }
         }
-        
       } 
-      
     }
+    
     
     throw new RuntimeException("No Path Found");
      
@@ -161,16 +171,16 @@ class Maze extends World {
   
   ArrayList<Posn> reconstruct(HashMap<Posn, Posn> cameFromPosn, Posn nextItem){
     ArrayList<Posn> steps = new ArrayList<Posn>();
-    Posn currPosition = nextItem;
-    while(currPosition != new Posn(0,0)) {
+    Posn currPosition = new Posn(nextItem.x, nextItem.y);
+    while(!currPosition.equals(new Posn(0,0))) {
       steps.add(new Posn(currPosition.x, currPosition.y));
+      this.finalPath.add(new Posn(currPosition.x, currPosition.y));
       currPosition = cameFromPosn.get(currPosition);
     }
-    
+    steps.add(new Posn(0, 0));
+    this.finalPath.add(new Posn(0, 0));
     return steps;
   }
-  
-  
 }
 
 class SpanningTree {
@@ -283,7 +293,7 @@ class EdgeComparator implements Comparator<Edge> {
 class ExamplesMaze {
   void testWorld(Tester t) {
     
-    new Maze(100, 60).bigBang(1250, 750, 1.0 / 16);
+    new Maze(100, 60).bigBang(1250, 750, 1.0 / 28);
   }
 }
 
