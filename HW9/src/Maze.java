@@ -35,7 +35,7 @@ class Maze extends World {
       }
     }
     
-    this.edgesInMaze = new SpanningTree(mazeLocations, r).getSpanningTree();
+    this.edgesInMaze = new SpanningTree(mazeLocations, r, this.height * this.width).getSpanningTree();
     
     WorldScene mazeSceneInProgress = new WorldScene(this.width * this.cellSize, 
         this.height * this.cellSize);
@@ -91,14 +91,14 @@ class Maze extends World {
       Posn nextCell = this.squaresToColor.remove(0);
       this.mazeScene.placeImageXY(new RectangleImage(this.cellSize - 2,
           this.cellSize - 2, OutlineMode.SOLID, Color.CYAN),
-          nextCell.x * this.cellSize + this.cellSize / 2, 
-          nextCell.y * cellSize + this.cellSize / 2);
+          nextCell.x * this.cellSize + this.cellSize / 2 + 1, 
+          nextCell.y * cellSize + this.cellSize / 2 + 1);
     } else if (!this.finalPath.isEmpty()) {
       Posn nextCell = this.finalPath.remove(0);
       this.mazeScene.placeImageXY(new RectangleImage(this.cellSize - 2,
           this.cellSize - 2, OutlineMode.SOLID, Color.BLUE),
-          nextCell.x * this.cellSize + this.cellSize / 2, 
-          nextCell.y * cellSize + this.cellSize / 2);
+          nextCell.x * this.cellSize + this.cellSize / 2 + 1, 
+          nextCell.y * cellSize + this.cellSize / 2 + 1);
     }
   }
   
@@ -189,10 +189,12 @@ class SpanningTree {
   private final ArrayList<Edge> edgesInTree;
   private final ArrayList<Edge> worklist;  // all edges in graph, sorted by edge weights
   private final ArrayList<ArrayList<Posn>> graphLocations;
+  private final int nodeCount;
   
-  SpanningTree(ArrayList<ArrayList<Posn>> graphLocations, Random r) {
+  SpanningTree(ArrayList<ArrayList<Posn>> graphLocations, Random r, int nodeCount) {
     this.representatives = new HashMap<Posn, Posn>();
     this.graphLocations = graphLocations;
+    this.nodeCount = nodeCount;
     for (ArrayList<Posn> arr : graphLocations) {
       for (Posn p : arr) {
         this.representatives.put(p, p);
@@ -215,37 +217,28 @@ class SpanningTree {
       }
     }
     this.worklist.sort(new EdgeComparator());
+    System.out.print("Edges Sorted"); 
   }
   
-  SpanningTree(ArrayList<ArrayList<Posn>> graphLocations) {
-    this(graphLocations, new Random());
+  SpanningTree(ArrayList<ArrayList<Posn>> graphLocations, int nodeCount) {
+    this(graphLocations, new Random(), nodeCount);
   }
   
   ArrayList<Edge> getSpanningTree() {
     
-    while (this.isNotSpanning()) {
+    int counter = 0;
+    while (counter < this.nodeCount - 1) {
       Edge nextEdge = this.worklist.get(0);
       if (this.find(nextEdge.src).equals(this.find(nextEdge.dest))) {
         this.worklist.remove(0);
       } else {
+        counter += 1;
         this.edgesInTree.add(nextEdge);
         this.union(nextEdge.src, nextEdge.dest);
         this.worklist.remove(0);
       }
     }
     return this.edgesInTree;
-  }
-  
-  boolean isNotSpanning() {
-    Posn rootPosn = this.find(graphLocations.get(0).get(0));
-    for (ArrayList<Posn> arr : graphLocations) {
-      for (Posn p : arr) {
-        if (!this.find(p).equals(rootPosn)) {
-          return true;
-        }
-      }
-    }
-    return false;
   }
   
   Posn find(Posn key) {
@@ -258,10 +251,6 @@ class SpanningTree {
   
   void union(Posn src, Posn dest) {
     representatives.replace(this.find(src), this.find(dest));
-  }
-  
-  void sortEdges() {
-    this.edgesInTree.sort(new EdgeComparator());
   }
 }
 
@@ -293,7 +282,7 @@ class EdgeComparator implements Comparator<Edge> {
 class ExamplesMaze {
   void testWorld(Tester t) {
     
-    new Maze(100, 60).bigBang(1250, 750, 1.0 / 28);
+    new Maze(100, 60).bigBang(1250, 750, 1.0 / 100);
   }
 }
 
