@@ -411,8 +411,49 @@ class EdgeComparator implements Comparator<Edge> {
 }
 
 class ExamplesMaze {
+  
+  
+  /*
+   * Testing WishList
+   * 
+   * UnionFind:
+   * - There should be length * width - 1 edges in the final list of edges
+   * - At the end, all the nodes should connect to the same root node; running
+   * find on these edges should return the same result. 
+   * - 
+   * 
+   * Maze:
+   * - A new maze can be created without restarting the program. 
+   * - A new random maze can be generated
+   * 
+   * Player:
+   * - A Player cannot walk through walls
+   * - A Player leaves their previous path behind them
+   * - A Player has the same path reconstruction functionality as the built in algorithms
+   * 
+   * Searching: 
+   * - Both Depth First Search and Breadth First Search find the goal
+   * - The path Backwards does not contain any cycles and it does contain the start and end points. 
+   * -
+   * 
+   * OnKeyEvent:
+   * - While in Player mode (A search has not been initiated), they can move in all four directions
+   *  if a wall is not present.
+   *  Pressing the left key moves the player left, the right key right, the down key down and the up key up. 
+   *  Pressing B initiates a Breadth First Search
+   *  Pressing D initiates a Depth First Search
+   *  Pressing N initiates a New Random Maze. 
+   *  
+   *  The User is Notified of the completion of the Game
+   *  The Solution Path is Displayed. 
+   */
+  
   void testWorld(Tester t) {
-    new Maze(8, 8).bigBang(1250, 750, 1.0 / 100);
+    new Maze(30, 30).bigBang(1250, 750, 1.0 / 100);
   }
+  
+  
+  
+  
 }
 
