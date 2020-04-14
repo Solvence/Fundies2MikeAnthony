@@ -99,7 +99,7 @@ class Maze extends World {
         this.mazeMap.put(edge.getDest(), pathsFromPosn);
       }
       else {
-        this.mazeMap.get(edge.getDest()).add(edge.getDest());
+        this.mazeMap.get(edge.getDest()).add(edge.getSrc());
       }
     }
   }
@@ -993,6 +993,31 @@ class ExamplesMaze {
     maze1.onKeyEvent("h");
 
     t.checkFail(maze1, maze1b, "New Maze Created");
+    
+    this.initTestConditions();
+    maze1.onKeyEvent("left");
+
+    t.checkExpect(maze1, maze1b); // Should pass since wall blocks movement
+    
+    this.initTestConditions();
+    maze1.onKeyEvent("right");
+
+    t.checkExpect(maze1, maze1b); // Should pass since wall blocks movement
+    
+    this.initTestConditions();
+    maze1.onKeyEvent("down");
+
+    t.checkFail(maze1, maze1b, "Player has moved up");
+    
+    this.initTestConditions();
+    maze1.onKeyEvent("down");
+
+    t.checkFail(maze1, maze1b, "Player has moved down");
+    
+    this.initTestConditions();
+    maze1.onKeyEvent("s");
+
+    t.checkFail(maze1, maze1b, "Squares Toggled");
 
   }
 
