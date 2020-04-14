@@ -6,7 +6,7 @@
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="C:/Users/tonyt/Documents/2020 Spring/Fundies 2/EclipseJars/javalib.jar"/>
-	<classpathentry kind="lib" path="C:/Users/tonyt/Documents/2020 Spring/Fundies 2/EclipseJars/tester.jar"/>
+	<classpathentry kind="lib" path="/Users/michaelsteinberg/eclipseJars/javalib.jar"/>
+	<classpathentry kind="lib" path="/Users/michaelsteinberg/eclipseJars/tester.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
