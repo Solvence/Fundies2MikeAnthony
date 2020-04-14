@@ -10,6 +10,18 @@ import javalib.impworld.*;
 import java.awt.Color;
 import javalib.worldimages.*;
 
+class ScoreBox {
+  int score;
+  OverlayImage image;
+  
+  ScoreBox(int score){
+    this.score = score;
+    TextImage text = new TextImage(Integer.toString(score), 40, Color.black);
+    RectangleImage scoreRect = new RectangleImage(100, 60, OutlineMode.SOLID, Color.white);
+    this.image = new OverlayImage(text, scoreRect);
+  }
+}
+
 class Maze extends World {
   private final int width;
   private final int height;
@@ -20,11 +32,15 @@ class Maze extends World {
   private final ArrayList<Posn> finalPath;
   private final Posn player;
   private final HashMap<Posn, ArrayList<Posn>> mazeMap;
-  private boolean isPlayerMode;
+  private boolean isPlayerMode; // This can be toggled 
   private final ArrayList<Posn> squaresColored;
   private final HashMap<Posn, Posn> playerPath;
   private SpanningTree mazeTree;
   private final Random r;
+  private boolean toggleVisited;
+  private boolean showingVisited;
+  private ScoreBox scoreBox;
+  private int initialFinalPathLength;
   
   Maze(int width, int height, Random r) {
     this.width = width;
@@ -38,6 +54,10 @@ class Maze extends World {
     this.squaresColored.add(new Posn(0, 0));
     this.playerPath = new HashMap<Posn, Posn>();
     this.r = r;
+    this.toggleVisited = false;
+    this.showingVisited = true;
+    this.scoreBox = new ScoreBox(0);
+    this.initialFinalPathLength = 0;
     
     this.cellSize = Math.min(1250 / this.width, 750 / this.height);
 
@@ -48,7 +68,7 @@ class Maze extends World {
         mazeLocations.get(row).add(new Posn(col, row));
       }
     }
-    this.mazeTree =  new SpanningTree(mazeLocations, this.r);
+    this.mazeTree =  new SpanningTree(mazeLocations, this.r, new NormalMode());
     this.edgesInMaze = this.mazeTree.getSpanningTree();
     
     this.mazeScene = this.mazeTree.getMazeScene(this.cellSize);
@@ -79,7 +99,8 @@ class Maze extends World {
   }
   
   public WorldScene makeScene() {
-    if (this.isPlayerMode) {
+    
+    if (this.isPlayerMode && this.showingVisited) {
       WorldScene mazePlayerScene = this.mazeTree.getMazeScene(this.cellSize);
       for (Posn path : squaresColored) {
         mazePlayerScene.placeImageXY(new RectangleImage(this.cellSize - 2,
@@ -92,30 +113,91 @@ class Maze extends World {
           this.cellSize - 2, OutlineMode.SOLID, Color.BLUE),
           path.x * this.cellSize + this.cellSize / 2 + 1, 
           path.y * cellSize + this.cellSize / 2 + 1);
+        this.displayScore(mazePlayerScene);
       }
       mazePlayerScene.placeImageXY(new CircleImage(this.cellSize / 3, OutlineMode.SOLID, Color.RED), 
           player.x * this.cellSize + this.cellSize / 2 + 1, 
           player.y * cellSize + this.cellSize / 2 + 1);
       return mazePlayerScene;
+    } else if (this.isPlayerMode && !this.showingVisited){
+      WorldScene mazePlayerScene = this.mazeTree.getMazeScene(this.cellSize);
+      for (Posn path : finalPath) {
+        mazePlayerScene.placeImageXY(new RectangleImage(this.cellSize - 2,
+          this.cellSize - 2, OutlineMode.SOLID, Color.BLUE),
+          path.x * this.cellSize + this.cellSize / 2 + 1, 
+          path.y * cellSize + this.cellSize / 2 + 1);
+      }
+      mazePlayerScene.placeImageXY(new CircleImage(this.cellSize / 3, OutlineMode.SOLID, Color.RED), 
+          player.x * this.cellSize + this.cellSize / 2 + 1, 
+          player.y * cellSize + this.cellSize / 2 + 1);
+      this.displayScore(mazePlayerScene);
+      return mazePlayerScene;
+    } else if (!this.showingVisited) {
+      return this.mazeTree.getMazeScene(this.cellSize);
+    } else if (this.toggleVisited && this.showingVisited){
+      this.addBacklog();
+      return this.mazeScene;
     } else {
       return this.mazeScene;
     }
   }
   
   public void onTick() {
-    if (this.squaresToColor.size() > 0) {
+    
+  if (this.squaresToColor.size() > 0 && !this.showingVisited && this.toggleVisited) {
+    this.addBacklog();
+  } else if (this.squaresToColor.size() > 0 && this.showingVisited && this.toggleVisited) {
+    this.mazeScene = this.mazeTree.getMazeScene(this.cellSize);
+  } else if (this.squaresToColor.size() > 0 && this.showingVisited && !this.toggleVisited) {
       Posn nextCell = this.squaresToColor.remove(0);
+      this.squaresColored.add(nextCell);
       this.mazeScene.placeImageXY(new RectangleImage(this.cellSize - 2,
           this.cellSize - 2, OutlineMode.SOLID, Color.CYAN),
           nextCell.x * this.cellSize + this.cellSize / 2 + 1, 
           nextCell.y * cellSize + this.cellSize / 2 + 1);
+
+    } else if (this.squaresToColor.size() > 0 && !this.showingVisited) {
+      Posn nextCell = this.squaresToColor.remove(0);
+      this.squaresColored.add(nextCell);
     } else if (!this.finalPath.isEmpty() && !this.isPlayerMode) {
       Posn nextCell = this.finalPath.remove(0);
       this.mazeScene.placeImageXY(new RectangleImage(this.cellSize - 2,
           this.cellSize - 2, OutlineMode.SOLID, Color.BLUE),
           nextCell.x * this.cellSize + this.cellSize / 2 + 1, 
           nextCell.y * cellSize + this.cellSize / 2 + 1);
+      this.displayScore(this.mazeScene);
     }
+    
+    if (this.toggleVisited) {
+      this.showingVisited = !this.showingVisited;
+      this.toggleVisited = false;
+    }
+  }
+  
+  public void displayScore(WorldScene scene) {
+      this.scoreBox = new ScoreBox(this.getUniqueColoredSquaresCount() - this.initialFinalPathLength);
+      scene.placeImageXY(this.scoreBox.image, 100, 100);
+  }
+  
+  public void addBacklog() {
+    
+    for (Posn nextCell : this.squaresColored) {
+      this.mazeScene.placeImageXY(new RectangleImage(this.cellSize - 2,
+          this.cellSize - 2, OutlineMode.SOLID, Color.CYAN),
+          nextCell.x * this.cellSize + this.cellSize / 2 + 1, 
+          nextCell.y * cellSize + this.cellSize / 2 + 1);
+    }
+
+  }
+  
+  public int getUniqueColoredSquaresCount() {
+    HashMap<Posn, Boolean> uniqueSquares = new HashMap<Posn, Boolean>();
+    
+    for (Posn square : this.squaresColored) {
+      uniqueSquares.put(square, true);
+    }
+    
+    return uniqueSquares.size();
   }
   
   public void onKeyEvent(String key) {
@@ -128,48 +210,13 @@ class Maze extends World {
       this.finalPath.clear();
       this.searchMaze(false);
     } else if (key.equals("n")) {
-      this.finalPath.clear();
-      this.player.x = 0;
-      this.player.y = 0;
-      this.squaresToColor.clear();
-      this.squaresToColor.add(new Posn(player.x, player.y));
-      this.isPlayerMode = true;
-      this.squaresColored.clear();
-      this.squaresColored.add(new Posn(player.x, player.y));
-      this.playerPath.clear();
-      
-      ArrayList<ArrayList<Posn>> mazeLocations = new ArrayList<ArrayList<Posn>>();
-      for (int row = 0; row < height; row += 1) {
-        mazeLocations.add(new ArrayList<Posn>());
-        for (int col = 0; col < width; col += 1) {
-          mazeLocations.get(row).add(new Posn(col, row));
-        }
-      }
-      
-      this.mazeTree = new SpanningTree(mazeLocations, this.r);
-      this.edgesInMaze = this.mazeTree.getSpanningTree();
-      
-      this.mazeScene = this.mazeTree.getMazeScene(this.cellSize);
-      
-      this.mazeMap.clear();
-      
-      for (Edge edge : this.edgesInMaze) {
-        if (this.mazeMap.get(edge.src) == null) {
-          ArrayList<Posn> pathsFromPosn = new ArrayList<Posn>();
-          pathsFromPosn.add(edge.dest);
-          this.mazeMap.put(edge.src, pathsFromPosn);
-        } else {
-          this.mazeMap.get(edge.src).add(edge.dest);
-        }
-        
-        if (this.mazeMap.get(edge.dest) == null) {
-          ArrayList<Posn> pathsFromPosn = new ArrayList<Posn>();
-          pathsFromPosn.add(edge.src);
-          this.mazeMap.put(edge.dest, pathsFromPosn);
-        } else {
-          this.mazeMap.get(edge.dest).add(edge.src);
-        }
-      }
+      this.buildNewMaze(new NormalMode());
+    } else if (key.equals("v")) {
+      this.buildNewMaze(new VerticalMode());
+    } else if (key.equals("s")) {
+      this.toggleVisited = true;
+    } else if (key.equals("h")) {
+      this.buildNewMaze(new HorizontalMode());
     } else if (key.equals("left")) {
       for (Posn neighbor : this.mazeMap.get(this.player)) {
         if (neighbor.x < this.player.x && playerPath.get(neighbor) == null) {
@@ -221,6 +268,59 @@ class Maze extends World {
         }
       }
     }
+    
+    
+
+  }
+  
+  void buildNewMaze(IMode mode) {
+    this.finalPath.clear();
+    this.player.x = 0;
+    this.player.y = 0;
+    this.squaresToColor.clear();
+    this.squaresToColor.add(new Posn(player.x, player.y));
+    this.isPlayerMode = true;
+    this.squaresColored.clear();
+    this.squaresColored.add(new Posn(player.x, player.y));
+    this.playerPath.clear();
+    this.initialFinalPathLength = 0;
+    this.scoreBox = new ScoreBox(0);
+    
+    ArrayList<ArrayList<Posn>> mazeLocations = new ArrayList<ArrayList<Posn>>();
+    for (int row = 0; row < height; row += 1) {
+      mazeLocations.add(new ArrayList<Posn>());
+      for (int col = 0; col < width; col += 1) {
+        mazeLocations.get(row).add(new Posn(col, row));
+      }
+    }
+    
+    this.mazeTree = new SpanningTree(mazeLocations, this.r, mode);
+    this.edgesInMaze = this.mazeTree.getSpanningTree();
+    
+    this.mazeScene = this.mazeTree.getMazeScene(this.cellSize);
+    
+    this.mazeMap.clear();
+    
+    for (Edge edge : this.edgesInMaze) {
+      if (this.mazeMap.get(edge.src) == null) {
+        ArrayList<Posn> pathsFromPosn = new ArrayList<Posn>();
+        pathsFromPosn.add(edge.dest);
+        this.mazeMap.put(edge.src, pathsFromPosn);
+      } else {
+        this.mazeMap.get(edge.src).add(edge.dest);
+      }
+      
+      if (this.mazeMap.get(edge.dest) == null) {
+        ArrayList<Posn> pathsFromPosn = new ArrayList<Posn>();
+        pathsFromPosn.add(edge.src);
+        this.mazeMap.put(edge.dest, pathsFromPosn);
+      } else {
+        this.mazeMap.get(edge.dest).add(edge.src);
+      }
+    }
+    
+    
+    
   }
   
   // computes the path from the top left corner to the bottom right corner of the maze
@@ -274,9 +374,60 @@ class Maze extends World {
     }
     steps.add(new Posn(0, 0));
     this.finalPath.add(new Posn(0, 0));
+    this.initialFinalPathLength = this.finalPath.size();
     return steps;
   }
+  
 }
+
+
+interface IMode {
+  
+  boolean isNormal();
+  boolean isVertical();
+  boolean isHorizontal();
+  
+}
+
+abstract class AMode implements IMode{
+  
+  public boolean isNormal() {
+    return false;
+  }
+  
+  public boolean isVertical() {
+    return false;
+  }
+  
+  public boolean isHorizontal() {
+    return false;
+  }
+  
+}
+
+
+class NormalMode extends AMode {
+  
+  public boolean isNormal() {
+    return true;
+  }
+  
+}
+
+class VerticalMode extends AMode {
+  public boolean isVertical() {
+    return true;
+  }
+  
+}
+
+class HorizontalMode extends AMode {
+  public boolean isHorizontal() {
+    return true;
+  }
+  
+}
+
 
 class SpanningTree {
   
@@ -285,8 +436,9 @@ class SpanningTree {
   private final ArrayList<Edge> worklist;  // all edges in graph, sorted by edge weights
   private final ArrayList<ArrayList<Posn>> graphLocations;
   private final int nodeCount;
+  private final IMode mode;
   
-  SpanningTree(ArrayList<ArrayList<Posn>> graphLocations, Random r) {
+  SpanningTree(ArrayList<ArrayList<Posn>> graphLocations, Random r, IMode mode) {
     this.representatives = new HashMap<Posn, Posn>();
     this.graphLocations = graphLocations;
     int nodes = 0;
@@ -294,7 +446,7 @@ class SpanningTree {
       nodes += arr.size();
     }
     this.nodeCount = nodes;
-    
+    this.mode = mode;
     for (ArrayList<Posn> arr : graphLocations) {
       for (Posn p : arr) {
         this.representatives.put(p, p);
@@ -304,23 +456,32 @@ class SpanningTree {
     this.edgesInTree = new ArrayList<Edge>();
     this.worklist = new ArrayList<Edge>();  
     
+    int vertMultiplier = 1;
+    int horizMultiplier = 1;
+    
+    if (this.mode.isVertical()) {
+      vertMultiplier = 5;
+    } else if (this.mode.isHorizontal()){
+      horizMultiplier = 5;
+    }
+    
     for (int row = 0; row < graphLocations.size(); row += 1) {
       for (int col = 0; col < graphLocations.get(row).size(); col += 1) {
         if (row != graphLocations.size() - 1) {
           worklist.add(new Edge(graphLocations.get(row).get(col), 
-              graphLocations.get(row + 1).get(col), r.nextInt(1000)));
+              graphLocations.get(row + 1).get(col), r.nextInt(1000 * horizMultiplier)));
         }
         if (col != graphLocations.get(row).size() - 1) {
           worklist.add(new Edge(graphLocations.get(row).get(col), 
-              graphLocations.get(row).get(col + 1), r.nextInt(1000)));
+              graphLocations.get(row).get(col + 1), r.nextInt(1000 * vertMultiplier)));
         }
       }
     }
     this.worklist.sort(new EdgeComparator());
   }
   
-  SpanningTree(ArrayList<ArrayList<Posn>> graphLocations) {
-    this(graphLocations, new Random());
+  SpanningTree(ArrayList<ArrayList<Posn>> graphLocations, int nodeCount, IMode mode) {
+    this(graphLocations, new Random(), mode);
   }
   
   // Computes the minimum spanning tree using Kruskal's algorithm on the worklist of weighted edges
@@ -490,7 +651,7 @@ class ExamplesMaze {
         mazeLocations.get(row).add(new Posn(col, row));
       }
     }
-    tree1 = new SpanningTree(mazeLocations, new Random(360));
+    tree1 = new SpanningTree(mazeLocations, new Random(360), new NormalMode());
     
     ArrayList<ArrayList<Posn>> mazeLocations2 = new ArrayList<ArrayList<Posn>>();
     for (int row = 0; row < 3; row += 1) {
@@ -499,7 +660,7 @@ class ExamplesMaze {
         mazeLocations2.get(row).add(new Posn(col, row));
       }
     }
-    tree2 = new SpanningTree(mazeLocations2, new Random(350));
+    tree2 = new SpanningTree(mazeLocations2, new Random(350), new NormalMode());
   }
   
   // test that the getSpanningTree method in SpanningTree functions properly
@@ -697,9 +858,34 @@ class ExamplesMaze {
   }
   
   // test the compareTo method in the Edge class
-  /*void testCompareTo(Tester t) {
-    Edge e1 = 
-  }*/
+  void testCompareTo(Tester t) {
+    Edge e1 = new Edge(new Posn(1, 1), new Posn(1, 2), 10);
+    Edge e2 = new Edge(new Posn(2, 3), new Posn(3, 3), 10);
+    Edge e3 = new Edge(new Posn(3, 3), new Posn(3, 2), 11);
+    Edge e4 = new Edge(new Posn(0, 0), new Posn(1, 0), 9);
+    
+    t.checkExpect(e1.compareTo(e2), 0);
+    t.checkExpect(e1.compareTo(e3), -1);
+    t.checkExpect(e1.compareTo(e4), 1);
+    t.checkExpect(e3.compareTo(e4), 2);
+    t.checkExpect(e4.compareTo(e4), 0);
+  }
+  
+  // test the compare method in the EdgeComparator class
+  void testCompare(Tester t) {
+    Edge e1 = new Edge(new Posn(1, 1), new Posn(1, 2), 10);
+    Edge e2 = new Edge(new Posn(2, 3), new Posn(3, 3), 10);
+    Edge e3 = new Edge(new Posn(3, 3), new Posn(3, 2), 11);
+    Edge e4 = new Edge(new Posn(0, 0), new Posn(1, 0), 9);
+    
+    EdgeComparator ec = new EdgeComparator();
+    
+    t.checkExpect(ec.compare(e1, e2), 0);
+    t.checkExpect(ec.compare(e1, e3), -1);
+    t.checkExpect(ec.compare(e1, e4), 1);
+    t.checkExpect(ec.compare(e3, e4), 2);
+    t.checkExpect(ec.compare(e4, e4), 0);
+  }
   
   void testWorld(Tester t) {
     new Maze(30, 30).bigBang(1250, 750, 1.0 / 100);
