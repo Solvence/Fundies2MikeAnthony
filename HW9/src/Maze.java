@@ -10,6 +10,18 @@ import javalib.impworld.*;
 import java.awt.Color;
 import javalib.worldimages.*;
 
+class ScoreBox {
+  int score;
+  OverlayImage image;
+  
+  ScoreBox(int score){
+    this.score = score;
+    TextImage text = new TextImage(Integer.toString(score), 40, Color.black);
+    RectangleImage scoreRect = new RectangleImage(100, 60, OutlineMode.SOLID, Color.white);
+    this.image = new OverlayImage(text, scoreRect);
+  }
+}
+
 class Maze extends World {
   private final int width;
   private final int height;
@@ -26,6 +38,8 @@ class Maze extends World {
   private SpanningTree mazeTree;
   private boolean toggleVisited;
   private boolean showingVisited;
+  private ScoreBox scoreBox;
+  private int initialFinalPathLength;
   
   Maze(int width, int height, Random r) {
     this.width = width;
@@ -40,6 +54,8 @@ class Maze extends World {
     this.playerPath = new HashMap<Posn, Posn>();
     this.toggleVisited = false;
     this.showingVisited = true;
+    this.scoreBox = new ScoreBox(0);
+    this.initialFinalPathLength = 0;
     
     this.cellSize = Math.min(1250 / this.width, 750 / this.height);
 
@@ -81,6 +97,7 @@ class Maze extends World {
   }
   
   public WorldScene makeScene() {
+    
     if (this.isPlayerMode && this.showingVisited) {
       WorldScene mazePlayerScene = this.mazeTree.getMazeScene(this.cellSize);
       for (Posn path : squaresColored) {
@@ -94,18 +111,7 @@ class Maze extends World {
           this.cellSize - 2, OutlineMode.SOLID, Color.BLUE),
           path.x * this.cellSize + this.cellSize / 2 + 1, 
           path.y * cellSize + this.cellSize / 2 + 1);
-      }
-      mazePlayerScene.placeImageXY(new CircleImage(this.cellSize / 3, OutlineMode.SOLID, Color.RED), 
-          player.x * this.cellSize + this.cellSize / 2 + 1, 
-          player.y * cellSize + this.cellSize / 2 + 1);
-      return mazePlayerScene;
-    } else if (this.isPlayerMode && this.showingVisited){
-      WorldScene mazePlayerScene = this.mazeTree.getMazeScene(this.cellSize);
-      for (Posn path : finalPath) {
-        mazePlayerScene.placeImageXY(new RectangleImage(this.cellSize - 2,
-          this.cellSize - 2, OutlineMode.SOLID, Color.BLUE),
-          path.x * this.cellSize + this.cellSize / 2 + 1, 
-          path.y * cellSize + this.cellSize / 2 + 1);
+        this.displayScore(mazePlayerScene);
       }
       mazePlayerScene.placeImageXY(new CircleImage(this.cellSize / 3, OutlineMode.SOLID, Color.RED), 
           player.x * this.cellSize + this.cellSize / 2 + 1, 
@@ -122,6 +128,7 @@ class Maze extends World {
       mazePlayerScene.placeImageXY(new CircleImage(this.cellSize / 3, OutlineMode.SOLID, Color.RED), 
           player.x * this.cellSize + this.cellSize / 2 + 1, 
           player.y * cellSize + this.cellSize / 2 + 1);
+      this.displayScore(mazePlayerScene);
       return mazePlayerScene;
     } else if (!this.showingVisited) {
       return this.mazeTree.getMazeScene(this.cellSize);
@@ -156,12 +163,18 @@ class Maze extends World {
           this.cellSize - 2, OutlineMode.SOLID, Color.BLUE),
           nextCell.x * this.cellSize + this.cellSize / 2 + 1, 
           nextCell.y * cellSize + this.cellSize / 2 + 1);
+      this.displayScore(this.mazeScene);
     }
     
     if (this.toggleVisited) {
       this.showingVisited = !this.showingVisited;
       this.toggleVisited = false;
     }
+  }
+  
+  public void displayScore(WorldScene scene) {
+      this.scoreBox = new ScoreBox(this.getUniqueColoredSquaresCount() - this.initialFinalPathLength);
+      scene.placeImageXY(this.scoreBox.image, 100, 100);
   }
   
   public void addBacklog() {
@@ -173,6 +186,16 @@ class Maze extends World {
           nextCell.y * cellSize + this.cellSize / 2 + 1);
     }
 
+  }
+  
+  public int getUniqueColoredSquaresCount() {
+    HashMap<Posn, Boolean> uniqueSquares = new HashMap<Posn, Boolean>();
+    
+    for (Posn square : this.squaresColored) {
+      uniqueSquares.put(square, true);
+    }
+    
+    return uniqueSquares.size();
   }
   
   public void onKeyEvent(String key) {
@@ -258,6 +281,8 @@ class Maze extends World {
     this.squaresColored.clear();
     this.squaresColored.add(new Posn(player.x, player.y));
     this.playerPath.clear();
+    this.initialFinalPathLength = 0;
+    this.scoreBox = new ScoreBox(0);
     
     ArrayList<ArrayList<Posn>> mazeLocations = new ArrayList<ArrayList<Posn>>();
     for (int row = 0; row < height; row += 1) {
@@ -342,6 +367,7 @@ class Maze extends World {
     }
     steps.add(new Posn(0, 0));
     this.finalPath.add(new Posn(0, 0));
+    this.initialFinalPathLength = this.finalPath.size();
     return steps;
   }
   
