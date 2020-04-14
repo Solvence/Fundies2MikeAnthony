@@ -10,24 +10,31 @@ import javalib.impworld.*;
 import java.awt.Color;
 import javalib.worldimages.*;
 
+// Holds the Score and Displays the Image containing the score 
 class ScoreBox {
-  int score;
-  OverlayImage image;
+  private final int score;
+  private final OverlayImage image;
 
   ScoreBox(int score) {
     this.score = score;
-    TextImage text = new TextImage("Maze Complete! Wrong Move Count: " + Integer.toString(score),
+    TextImage text = new TextImage("Maze Complete! Wrong Move Count: " + Integer.toString(this.score),
         20, Color.black);
     RectangleImage scoreRect = new RectangleImage(500, 60, OutlineMode.SOLID, Color.white);
     this.image = new OverlayImage(text, scoreRect);
   }
+  
+  // Displays the image containing the score on the given scene
+  public void displayImage(WorldScene scene) {
+    scene.placeImageXY(this.image, 300, 100);
+  }
 }
 
+// Represents a Maze
 class Maze extends World {
   private final int width;
   private final int height;
   private ArrayList<Edge> edgesInMaze; // allowed to be reinstantiated when creating a new maze
-  private WorldScene mazeScene;
+  private WorldScene mazeScene; // Can be reinstantiated when creating a new maze
   private final int cellSize; // in pixels
   private final ArrayList<Posn> squaresToColor;
   private final ArrayList<Posn> finalPath;
@@ -36,13 +43,14 @@ class Maze extends World {
   private boolean isPlayerMode; // This can be toggled
   private final ArrayList<Posn> squaresColored;
   private final HashMap<Posn, Posn> playerPath;
-  private SpanningTree mazeTree;
+  private SpanningTree mazeTree; // Can be reinstantiated when creating new maze
   private final Random r;
-  private boolean toggleVisited;
-  private boolean showingVisited;
-  private ScoreBox scoreBox;
+  private boolean toggleVisited; // Holds state of whether or not visited squares should be toggled
+  private boolean showingVisited; // Toggled when toggleVisited is true. 
+  private ScoreBox scoreBox; // Can be reinstantiated when new maze created
   private int initialFinalPathLength;
 
+  // Standard Constructor for maze, with ability to specify random. 
   Maze(int width, int height, Random r) {
     this.width = width;
     this.height = height;
@@ -77,30 +85,32 @@ class Maze extends World {
     this.mazeMap = new HashMap<Posn, ArrayList<Posn>>();
 
     for (Edge edge : this.edgesInMaze) {
-      if (this.mazeMap.get(edge.src) == null) {
+      if (this.mazeMap.get(edge.getSrc()) == null) {
         ArrayList<Posn> pathsFromPosn = new ArrayList<Posn>();
-        pathsFromPosn.add(edge.dest);
-        this.mazeMap.put(edge.src, pathsFromPosn);
+        pathsFromPosn.add(edge.getDest());
+        this.mazeMap.put(edge.getSrc(), pathsFromPosn);
       }
       else {
-        this.mazeMap.get(edge.src).add(edge.dest);
+        this.mazeMap.get(edge.getSrc()).add(edge.getDest());
       }
 
-      if (this.mazeMap.get(edge.dest) == null) {
+      if (this.mazeMap.get(edge.getDest()) == null) {
         ArrayList<Posn> pathsFromPosn = new ArrayList<Posn>();
-        pathsFromPosn.add(edge.src);
-        this.mazeMap.put(edge.dest, pathsFromPosn);
+        pathsFromPosn.add(edge.getSrc());
+        this.mazeMap.put(edge.getDest(), pathsFromPosn);
       }
       else {
-        this.mazeMap.get(edge.dest).add(edge.src);
+        this.mazeMap.get(edge.getDest()).add(edge.getDest());
       }
     }
   }
 
+  // Convenience Constructor for Maze
   Maze(int width, int height) {
     this(width, height, new Random());
   }
 
+  // Makes a new Scene and displays it. Public due to override
   public WorldScene makeScene() {
 
     if (this.isPlayerMode && this.showingVisited) {
@@ -128,6 +138,7 @@ class Maze extends World {
     }
   }
 
+  // Display the visited Squares
   private void displayVisited(WorldScene scene) {
     for (Posn path : squaresColored) {
       scene.placeImageXY(
@@ -136,7 +147,8 @@ class Maze extends World {
           path.y * cellSize + this.cellSize / 2 + 1);
     }
   }
-
+  
+  // Displays the final path
   private void displayFinalPath(WorldScene scene) {
     for (Posn path : finalPath) {
       scene.placeImageXY(
@@ -147,12 +159,14 @@ class Maze extends World {
     }
   }
 
+  // Displays the player on the board
   private void displayPlayer(WorldScene scene) {
     scene.placeImageXY(new CircleImage(this.cellSize / 3, OutlineMode.SOLID, Color.RED),
         player.x * this.cellSize + this.cellSize / 2 + 1,
         player.y * cellSize + this.cellSize / 2 + 1);
   }
 
+  // Updates the world on tick. Public due to required override. 
   public void onTick() {
 
     if (this.squaresToColor.size() > 0 && !this.showingVisited && this.toggleVisited) {
@@ -189,11 +203,13 @@ class Maze extends World {
     }
   }
 
+  // Calculates and Displays the Number of Wrong moves.  
   private void displayScore(WorldScene scene) {
     this.scoreBox = new ScoreBox(this.getUniqueColoredSquaresCount() - this.initialFinalPathLength);
-    scene.placeImageXY(this.scoreBox.image, 300, 100);
+    this.scoreBox.displayImage(scene);
   }
 
+  // Re-adds the visited squares to the scene if showing visited squares is toggled back on. 
   private void addBacklog() {
 
     for (Posn nextCell : this.squaresColored) {
@@ -205,6 +221,7 @@ class Maze extends World {
 
   }
 
+  // Calculates the unique amount of squares visited by the player. 
   private int getUniqueColoredSquaresCount() {
     HashMap<Posn, Boolean> uniqueSquares = new HashMap<Posn, Boolean>();
 
@@ -215,6 +232,7 @@ class Maze extends World {
     return uniqueSquares.size();
   }
 
+  // Updates the world when key is pressed. Public due to required override. 
   public void onKeyEvent(String key) {
     if (key.equals("b")) {
       this.isPlayerMode = false;
@@ -299,7 +317,8 @@ class Maze extends World {
 
   }
 
-  void buildNewMaze(IMode mode) {
+  // Builds a new maze of a given type, without restarting the game. 
+  private void buildNewMaze(IMode mode) {
     this.finalPath.clear();
     this.player.x = 0;
     this.player.y = 0;
@@ -328,22 +347,22 @@ class Maze extends World {
     this.mazeMap.clear();
 
     for (Edge edge : this.edgesInMaze) {
-      if (this.mazeMap.get(edge.src) == null) {
+      if (this.mazeMap.get(edge.getSrc()) == null) {
         ArrayList<Posn> pathsFromPosn = new ArrayList<Posn>();
-        pathsFromPosn.add(edge.dest);
-        this.mazeMap.put(edge.src, pathsFromPosn);
+        pathsFromPosn.add(edge.getDest());
+        this.mazeMap.put(edge.getSrc(), pathsFromPosn);
       }
       else {
-        this.mazeMap.get(edge.src).add(edge.dest);
+        this.mazeMap.get(edge.getSrc()).add(edge.getDest());
       }
 
-      if (this.mazeMap.get(edge.dest) == null) {
+      if (this.mazeMap.get(edge.getDest()) == null) {
         ArrayList<Posn> pathsFromPosn = new ArrayList<Posn>();
-        pathsFromPosn.add(edge.src);
-        this.mazeMap.put(edge.dest, pathsFromPosn);
+        pathsFromPosn.add(edge.getSrc());
+        this.mazeMap.put(edge.getDest(), pathsFromPosn);
       }
       else {
-        this.mazeMap.get(edge.dest).add(edge.src);
+        this.mazeMap.get(edge.getDest()).add(edge.getSrc());
       }
     }
 
@@ -395,6 +414,8 @@ class Maze extends World {
     throw new RuntimeException("No Path Found");
   }
 
+  // Reconstruct the path from the end of the maze back to the beginning.
+  // Yields the path that would be taken if solution was perfect. 
   ArrayList<Posn> reconstruct(HashMap<Posn, Posn> cameFromPosn, Posn nextItem) {
     ArrayList<Posn> steps = new ArrayList<Posn>();
     Posn currPosition = new Posn(nextItem.x, nextItem.y);
@@ -411,56 +432,66 @@ class Maze extends World {
 
 }
 
+// Mode that stores the potential biases of 
 interface IMode {
 
-  boolean isNormal();
-
-  boolean isVertical();
-
-  boolean isHorizontal();
+  int getHorizWeight(int defaultWeight);
+  int getVertWeight(int defaultWeight);
 
 }
 
-abstract class AMode implements IMode {
-  
-  // We want these methods to be accessible from anywhere for 
-  // checking if a mode is of a certain type, so public is fine
-  public boolean isNormal() {
-    return false;
+// Represents the mode that will create unbiased edges
+class NormalMode implements IMode {
+
+  @Override
+  public int getHorizWeight(int defaultWeight) {
+    // TODO Auto-generated method stub
+    return defaultWeight;
   }
 
-  public boolean isVertical() {
-    return false;
-  }
-
-  public boolean isHorizontal() {
-    return false;
+  @Override
+  public int getVertWeight(int defaultWeight) {
+    // TODO Auto-generated method stub
+    return defaultWeight;
   }
 
 }
 
-class NormalMode extends AMode {
+// Represents the mode that will favor vertical edges. 
+class VerticalMode implements IMode {
 
-  public boolean isNormal() {
-    return true;
+  @Override
+  public int getHorizWeight(int defaultWeight) {
+    // TODO Auto-generated method stub
+    return defaultWeight;
+  }
+
+  @Override
+  public int getVertWeight(int defaultWeight) {
+    // TODO Auto-generated method stub
+    return 5 * defaultWeight;
   }
 
 }
 
-class VerticalMode extends AMode {
-  public boolean isVertical() {
-    return true;
+//Represents the mode that will favor horizontal edges. 
+class HorizontalMode implements IMode {
+
+  @Override
+  public int getHorizWeight(int defaultWeight) {
+    // TODO Auto-generated method stub
+    return 5 * defaultWeight;
+  }
+
+  @Override
+  public int getVertWeight(int defaultWeight) {
+    // TODO Auto-generated method stub
+    return 1 * defaultWeight;
   }
 
 }
 
-class HorizontalMode extends AMode {
-  public boolean isHorizontal() {
-    return true;
-  }
-
-}
-
+// Represents a Spanning Tree
 class SpanningTree {
 
   private final HashMap<Posn, Posn> representatives;
@@ -470,6 +501,7 @@ class SpanningTree {
   private final int nodeCount;
   private final IMode mode;
 
+  // Normal Constructor for spanningTree
   SpanningTree(ArrayList<ArrayList<Posn>> graphLocations, Random r, IMode mode) {
     this.representatives = new HashMap<Posn, Posn>();
     this.graphLocations = graphLocations;
@@ -488,31 +520,22 @@ class SpanningTree {
     this.edgesInTree = new ArrayList<Edge>();
     this.worklist = new ArrayList<Edge>();
 
-    int vertMultiplier = 1;
-    int horizMultiplier = 1;
-
-    if (this.mode.isVertical()) {
-      vertMultiplier = 5;
-    }
-    else if (this.mode.isHorizontal()) {
-      horizMultiplier = 5;
-    }
-
     for (int row = 0; row < graphLocations.size(); row += 1) {
       for (int col = 0; col < graphLocations.get(row).size(); col += 1) {
         if (row != graphLocations.size() - 1) {
           worklist.add(new Edge(graphLocations.get(row).get(col),
-              graphLocations.get(row + 1).get(col), r.nextInt(1000 * horizMultiplier)));
+              graphLocations.get(row + 1).get(col), r.nextInt(this.mode.getHorizWeight(1000))));
         }
         if (col != graphLocations.get(row).size() - 1) {
           worklist.add(new Edge(graphLocations.get(row).get(col),
-              graphLocations.get(row).get(col + 1), r.nextInt(1000 * vertMultiplier)));
+              graphLocations.get(row).get(col + 1), r.nextInt(this.mode.getVertWeight(1000))));
         }
       }
     }
     this.worklist.sort(new EdgeComparator());
   }
 
+  // Convenience Constructor for SpanningTree
   SpanningTree(ArrayList<ArrayList<Posn>> graphLocations, int nodeCount, IMode mode) {
     this(graphLocations, new Random(), mode);
   }
@@ -526,17 +549,18 @@ class SpanningTree {
   // representatives hashmap to represent a spanning tree, where every node's root
   // representative is
   // the same
-  ArrayList<Edge> getSpanningTree() {
+  // Gets the spanning Tree as required by Maze Class to build the edges. 
+  public ArrayList<Edge> getSpanningTree() {
     int counter = 0;
     while (counter < this.nodeCount - 1) {
       Edge nextEdge = this.worklist.get(0);
-      if (this.find(nextEdge.src).equals(this.find(nextEdge.dest))) {
+      if (this.find(nextEdge.getSrc()).equals(this.find(nextEdge.getDest()))) {
         this.worklist.remove(0);
       }
       else {
         counter += 1;
         this.edgesInTree.add(nextEdge);
-        this.union(nextEdge.src, nextEdge.dest);
+        this.union(nextEdge.getSrc(), nextEdge.getDest());
         this.worklist.remove(0);
       }
     }
@@ -567,6 +591,7 @@ class SpanningTree {
     representatives.replace(this.find(src), this.find(dest));
   }
 
+  // Creates a mazeScene given a cellSize, which is a grid with the edges in the minSpanningTree cut out. 
   WorldScene getMazeScene(int cellSize) {
     int width = graphLocations.get(0).size();
     int height = graphLocations.size();
@@ -583,13 +608,13 @@ class SpanningTree {
         boolean hasRightWall = true;
         boolean hasDownWall = true;
         for (Edge e : this.edgesInTree) {
-          if (e.src.equals(new Posn(col, row)) && e.dest.equals(new Posn(col + 1, row))
-              || e.dest.equals(new Posn(col, row)) && e.src.equals(new Posn(col + 1, row))
+          if (e.getSrc().equals(new Posn(col, row)) && e.getDest().equals(new Posn(col + 1, row))
+              || e.getDest().equals(new Posn(col, row)) && e.getSrc().equals(new Posn(col + 1, row))
               || col == width - 1) {
             hasRightWall = false;
           }
-          if (e.src.equals(new Posn(col, row)) && e.dest.equals(new Posn(col, row + 1))
-              || e.dest.equals(new Posn(col, row)) && e.src.equals(new Posn(col, row + 1))
+          if (e.getSrc().equals(new Posn(col, row)) && e.getDest().equals(new Posn(col, row + 1))
+              || e.getDest().equals(new Posn(col, row)) && e.getSrc().equals(new Posn(col, row + 1))
               || row == height - 1) {
             hasDownWall = false;
           }
@@ -609,32 +634,52 @@ class SpanningTree {
   }
 }
 
+// Represents an Edge in a Tree / Maze
 class Edge implements Comparable<Edge> {
 
-  Posn src;
-  Posn dest;
+  private final Posn src;
+  private final Posn dest;
 
-  int weight;
+  private final int weight;
 
   Edge(Posn src, Posn dest, int weight) {
     this.src = src;
     this.dest = dest;
     this.weight = weight;
   }
+  
+  // Returns the src as Required by getSpanningTree. Public as it is a getter
+  public Posn getSrc() {
+    return this.src;
+  }
+  
+  // Returns the dest as Required by getSpanningTree. Public as it is a getter
+  public Posn getDest() {
+    return this.dest;
+  }
 
-  //
+  // Compares two edges based on their weight. Public as it must implement
+  // comparable and method visibility cannot be reduced. 
   public int compareTo(Edge o) {
     return this.weight - o.weight;
   }
 }
 
+// Compares on edge with enough and returns an integer based on the compareTo Method
 class EdgeComparator implements Comparator<Edge> {
+  
+  //Compares on edge with enough and returns an integer based on the compareTo Method
   public int compare(Edge o1, Edge o2) {
     return o1.compareTo(o2);
   }
 }
 
 class ExamplesMaze {
+  
+  void testWorld(Tester t) {
+    new Maze(6, 6).bigBang(1250, 750, 1.0 / 100);
+  }
+
 
   /*
    * Testing WishList
@@ -666,12 +711,14 @@ class ExamplesMaze {
 
   Maze maze1;
   Maze maze2;
+  Maze maze1b;
 
   SpanningTree tree1;
   SpanningTree tree2;
 
   void initTestConditions() {
     maze1 = new Maze(4, 4, new Random(360));
+    maze1b = new Maze(4, 4, new Random(360));
     maze2 = new Maze(3, 3, new Random(350));
 
     ArrayList<ArrayList<Posn>> mazeLocations = new ArrayList<ArrayList<Posn>>();
@@ -917,9 +964,35 @@ class ExamplesMaze {
     t.checkExpect(ec.compare(e3, e4), 2);
     t.checkExpect(ec.compare(e4, e4), 0);
   }
-
-  void testWorld(Tester t) {
-    new Maze(6, 6).bigBang(1250, 750, 1.0 / 100);
+  
+  void testOnKeyEvent(Tester t) {
+    this.initTestConditions();
+    
+    maze1.onKeyEvent("b");
+    t.checkFail(maze1, maze1b, "BFS");
+    
+    this.initTestConditions();
+    
+    maze1.onKeyEvent("b");
+    maze1b.onKeyEvent("d");
+    t.checkFail(maze1, maze1b, "Different Searches");
+    
+    this.initTestConditions();
+    maze1.onKeyEvent("n");
+    
+    t.checkFail(maze1, maze1b, "New Maze Created");
+    
+    this.initTestConditions();
+    maze1.onKeyEvent("v");
+    
+    t.checkFail(maze1, maze1b, "New Maze Created");
+    
+    this.initTestConditions();
+    maze1.onKeyEvent("h");
+    
+    t.checkFail(maze1, maze1b, "New Maze Created");
+    
   }
-
+  
+  
 }
