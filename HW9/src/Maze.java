@@ -1,5 +1,4 @@
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Random;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -17,12 +16,12 @@ class ScoreBox {
 
   ScoreBox(int score) {
     this.score = score;
-    TextImage text = new TextImage("Maze Complete! Wrong Move Count: " + Integer.toString(this.score),
-        20, Color.black);
+    TextImage text = new TextImage(
+        "Maze Complete! Wrong Move Count: " + Integer.toString(this.score), 20, Color.black);
     RectangleImage scoreRect = new RectangleImage(500, 60, OutlineMode.SOLID, Color.white);
     this.image = new OverlayImage(text, scoreRect);
   }
-  
+
   // Displays the image containing the score on the given scene
   public void displayImage(WorldScene scene) {
     scene.placeImageXY(this.image, 300, 100);
@@ -46,11 +45,11 @@ class Maze extends World {
   private SpanningTree mazeTree; // Can be reinstantiated when creating new maze
   private final Random r;
   private boolean toggleVisited; // Holds state of whether or not visited squares should be toggled
-  private boolean showingVisited; // Toggled when toggleVisited is true. 
+  private boolean showingVisited; // Toggled when toggleVisited is true.
   private ScoreBox scoreBox; // Can be reinstantiated when new maze created
   private int initialFinalPathLength;
 
-  // Standard Constructor for maze, with ability to specify random. 
+  // Standard Constructor for maze, with ability to specify random.
   Maze(int width, int height, Random r) {
     this.width = width;
     this.height = height;
@@ -147,7 +146,7 @@ class Maze extends World {
           path.y * cellSize + this.cellSize / 2 + 1);
     }
   }
-  
+
   // Displays the final path
   private void displayFinalPath(WorldScene scene) {
     for (Posn path : finalPath) {
@@ -166,7 +165,7 @@ class Maze extends World {
         player.y * cellSize + this.cellSize / 2 + 1);
   }
 
-  // Updates the world on tick. Public due to required override. 
+  // Updates the world on tick. Public due to required override.
   public void onTick() {
 
     if (this.squaresToColor.size() > 0 && !this.showingVisited && this.toggleVisited) {
@@ -203,13 +202,14 @@ class Maze extends World {
     }
   }
 
-  // Calculates and Displays the Number of Wrong moves.  
+  // Calculates and Displays the Number of Wrong moves.
   private void displayScore(WorldScene scene) {
     this.scoreBox = new ScoreBox(this.getUniqueColoredSquaresCount() - this.initialFinalPathLength);
     this.scoreBox.displayImage(scene);
   }
 
-  // Re-adds the visited squares to the scene if showing visited squares is toggled back on. 
+  // Re-adds the visited squares to the scene if showing visited squares is
+  // toggled back on.
   private void addBacklog() {
 
     for (Posn nextCell : this.squaresColored) {
@@ -221,7 +221,7 @@ class Maze extends World {
 
   }
 
-  // Calculates the unique amount of squares visited by the player. 
+  // Calculates the unique amount of squares visited by the player.
   private int getUniqueColoredSquaresCount() {
     HashMap<Posn, Boolean> uniqueSquares = new HashMap<Posn, Boolean>();
 
@@ -232,7 +232,7 @@ class Maze extends World {
     return uniqueSquares.size();
   }
 
-  // Updates the world when key is pressed. Public due to required override. 
+  // Updates the world when key is pressed. Public due to required override.
   public void onKeyEvent(String key) {
     if (key.equals("b")) {
       this.isPlayerMode = false;
@@ -317,7 +317,7 @@ class Maze extends World {
 
   }
 
-  // Builds a new maze of a given type, without restarting the game. 
+  // Builds a new maze of a given type, without restarting the game.
   private void buildNewMaze(IMode mode) {
     this.finalPath.clear();
     this.player.x = 0;
@@ -375,7 +375,7 @@ class Maze extends World {
   // through before finding the solution. Modifies the finalPath field to contain
   // all the positions
   // in the solution path
-  ArrayList<Posn> searchMaze(boolean BFS) {
+  ArrayList<Posn> searchMaze(boolean bfs) {
 
     ArrayDeque<Posn> worklist = new ArrayDeque<Posn>(); // A Queue or a Stack, depending on the
     // algorithm
@@ -401,7 +401,7 @@ class Maze extends World {
         for (Posn neighbor : neighbors) {
           if (visitedCells.get(neighbor) == null) {
             cameFromPosn.put(neighbor, nextItem);
-            if (BFS) {
+            if (bfs) {
               worklist.addLast(neighbor);
             }
             else {
@@ -415,7 +415,7 @@ class Maze extends World {
   }
 
   // Reconstruct the path from the end of the maze back to the beginning.
-  // Yields the path that would be taken if solution was perfect. 
+  // Yields the path that would be taken if solution was perfect.
   ArrayList<Posn> reconstruct(HashMap<Posn, Posn> cameFromPosn, Posn nextItem) {
     ArrayList<Posn> steps = new ArrayList<Posn>();
     Posn currPosition = new Posn(nextItem.x, nextItem.y);
@@ -436,6 +436,7 @@ class Maze extends World {
 interface IMode {
 
   int getHorizWeight(int defaultWeight);
+
   int getVertWeight(int defaultWeight);
 
 }
@@ -549,7 +550,7 @@ class SpanningTree {
   // representatives hashmap to represent a spanning tree, where every node's root
   // representative is
   // the same
-  // Gets the spanning Tree as required by Maze Class to build the edges. 
+  // Gets the spanning Tree as required by Maze Class to build the edges.
   public ArrayList<Edge> getSpanningTree() {
     int counter = 0;
     while (counter < this.nodeCount - 1) {
@@ -591,7 +592,8 @@ class SpanningTree {
     representatives.replace(this.find(src), this.find(dest));
   }
 
-  // Creates a mazeScene given a cellSize, which is a grid with the edges in the minSpanningTree cut out. 
+  // Creates a mazeScene given a cellSize, which is a grid with the edges in the
+  // minSpanningTree cut out.
   WorldScene getMazeScene(int cellSize) {
     int width = graphLocations.get(0).size();
     int height = graphLocations.size();
@@ -600,8 +602,8 @@ class SpanningTree {
         new RectangleImage(width * cellSize, height * cellSize, OutlineMode.OUTLINE, Color.BLACK),
         width * cellSize / 2, height * cellSize / 2);
 
-    WorldImage WALL = new LineImage(new Posn(0, cellSize), Color.BLACK);
-    WorldImage WALL_H = new RotateImage(WALL, 90);
+    WorldImage wall = new LineImage(new Posn(0, cellSize), Color.BLACK);
+    WorldImage wallH = new RotateImage(wall, 90);
     for (int row = 0; row < height; row += 1) {
       for (int col = 0; col < width; col += 1) {
 
@@ -621,11 +623,11 @@ class SpanningTree {
         }
 
         if (hasRightWall) {
-          mazeScene.placeImageXY(WALL, (col + 1) * cellSize, row * cellSize + cellSize / 2);
+          mazeScene.placeImageXY(wall, (col + 1) * cellSize, row * cellSize + cellSize / 2);
         }
 
         if (hasDownWall) {
-          mazeScene.placeImageXY(WALL_H, col * cellSize + cellSize / 2, (row + 1) * cellSize);
+          mazeScene.placeImageXY(wallH, col * cellSize + cellSize / 2, (row + 1) * cellSize);
         }
       }
     }
@@ -647,19 +649,19 @@ class Edge implements Comparable<Edge> {
     this.dest = dest;
     this.weight = weight;
   }
-  
+
   // Returns the src as Required by getSpanningTree. Public as it is a getter
   public Posn getSrc() {
     return this.src;
   }
-  
+
   // Returns the dest as Required by getSpanningTree. Public as it is a getter
   public Posn getDest() {
     return this.dest;
   }
 
   // Compares two edges based on their weight. Public as it must implement
-  // comparable and method visibility cannot be reduced. 
+  // comparable and method visibility cannot be reduced.
   public int compareTo(Edge o) {
     return this.weight - o.weight;
   }
@@ -667,19 +669,19 @@ class Edge implements Comparable<Edge> {
 
 // Compares on edge with enough and returns an integer based on the compareTo Method
 class EdgeComparator implements Comparator<Edge> {
-  
-  //Compares on edge with enough and returns an integer based on the compareTo Method
+
+  // Compares on edge with enough and returns an integer based on the compareTo
+  // Method
   public int compare(Edge o1, Edge o2) {
     return o1.compareTo(o2);
   }
 }
 
 class ExamplesMaze {
-  
+
   void testWorld(Tester t) {
     new Maze(6, 6).bigBang(1250, 750, 1.0 / 100);
   }
-
 
   /*
    * Testing WishList
@@ -964,35 +966,34 @@ class ExamplesMaze {
     t.checkExpect(ec.compare(e3, e4), 2);
     t.checkExpect(ec.compare(e4, e4), 0);
   }
-  
+
   void testOnKeyEvent(Tester t) {
     this.initTestConditions();
-    
+
     maze1.onKeyEvent("b");
     t.checkFail(maze1, maze1b, "BFS");
-    
+
     this.initTestConditions();
-    
+
     maze1.onKeyEvent("b");
     maze1b.onKeyEvent("d");
     t.checkFail(maze1, maze1b, "Different Searches");
-    
+
     this.initTestConditions();
     maze1.onKeyEvent("n");
-    
+
     t.checkFail(maze1, maze1b, "New Maze Created");
-    
+
     this.initTestConditions();
     maze1.onKeyEvent("v");
-    
+
     t.checkFail(maze1, maze1b, "New Maze Created");
-    
+
     this.initTestConditions();
     maze1.onKeyEvent("h");
-    
+
     t.checkFail(maze1, maze1b, "New Maze Created");
-    
+
   }
-  
-  
+
 }
