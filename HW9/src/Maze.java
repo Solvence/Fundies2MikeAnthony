@@ -1018,7 +1018,34 @@ class ExamplesMaze {
     maze1.onKeyEvent("s");
 
     t.checkFail(maze1, maze1b, "Squares Toggled");
-
+    
+//    this.initTestConditions();
+//    
+//    maze1.onKeyEvent("s");
+//    maze1.onTick();
+//    maze1.onKeyEvent("right");
+//    maze1.onKeyEvent("left");
+//    maze1.onKeyEvent("down");
+//    maze1.onKeyEvent("s");
+//    maze1.onTick();
+//
+//    maze1b.onTick();
+//    maze1b.onKeyEvent("right");
+//    maze1b.onKeyEvent("left");
+//    maze1b.onKeyEvent("down");
+//    maze1b.onTick();
+//    
+//    t.checkExpect(maze1, maze1b);
+    
+    this.initTestConditions();
+    
+    maze1.onKeyEvent("b");
+    for (int i = 0; i < 30; i++) {
+      maze1.onTick();
+    }
+    
+    
+    
   }
 
 }
