@@ -9,6 +9,27 @@ import javalib.impworld.*;
 import java.awt.Color;
 import javalib.worldimages.*;
 
+/*
+ * DOCUMENTATION:
+ * While a search has not been initiated, a player can move:
+ *   - up, down, left, right (arrow keys) move the character in the respective directions
+ *   - Pressing B initiates a Breadth First Search 
+ *   - Pressing D initiates a Depth First Search 
+ *   - Pressing N initiates a New normal random Maze. 
+ *   - Pressing V generates a new maze that favors vertical corridors. 
+ *   - Pressing H generates a new maze that favors horizontal corridors. 
+ *   - Pressing S toggles the visibility of visited cells
+ */
+
+/*
+ * EXTRA CREDIT:
+ *   - Provide an option to toggle the viewing of the visited paths.
+ *   - Allow the user the ability to start a new maze without restarting the program.
+ *   - Keep the score of wrong moves — for both the automatic solutions and manual ones
+ *   - Construct mazes with a bias in a particular direction —a preference for horizontal or 
+ *     vertical corridors. 
+ */
+
 // Holds the Score and Displays the Image containing the score 
 class ScoreBox {
   private final int score;
@@ -138,6 +159,7 @@ class Maze extends World {
   }
 
   // Display the visited Squares
+  // EFFECT: modifies the given scene to include the visited squares
   private void displayVisited(WorldScene scene) {
     for (Posn path : squaresColored) {
       scene.placeImageXY(
@@ -148,6 +170,7 @@ class Maze extends World {
   }
 
   // Displays the final path
+  // EFFECT: modifies the given scene to include the final solution path
   private void displayFinalPath(WorldScene scene) {
     for (Posn path : finalPath) {
       scene.placeImageXY(
@@ -159,6 +182,7 @@ class Maze extends World {
   }
 
   // Displays the player on the board
+  // EFFECT: modifies the given scene to include the player image
   private void displayPlayer(WorldScene scene) {
     scene.placeImageXY(new CircleImage(this.cellSize / 3, OutlineMode.SOLID, Color.RED),
         player.x * this.cellSize + this.cellSize / 2 + 1,
@@ -166,8 +190,16 @@ class Maze extends World {
   }
 
   // Updates the world on tick. Public due to required override.
+  // EFFECT: if the user is toggling cell visibility, remove/add the visibility as
+  // necessary
+  // modifies the mazeScene, showingVisited, and toggleVisited fields to do this
+  // modifies the mazeScene field to draw subsequent searched cells from searching
+  // algorithms
+  // modifies the squaresColored field to add any cells visited by a searching
+  // algorithm
+  // modifies squaresToColor as cells are colored in, to remove these cells from
+  // the queue
   public void onTick() {
-
     if (this.squaresToColor.size() > 0 && !this.showingVisited && this.toggleVisited) {
       this.addBacklog();
     }
@@ -181,7 +213,6 @@ class Maze extends World {
           new RectangleImage(this.cellSize - 2, this.cellSize - 2, OutlineMode.SOLID, Color.CYAN),
           nextCell.x * this.cellSize + this.cellSize / 2 + 1,
           nextCell.y * cellSize + this.cellSize / 2 + 1);
-
     }
     else if (this.squaresToColor.size() > 0 && !this.showingVisited) {
       Posn nextCell = this.squaresToColor.remove(0);
@@ -203,15 +234,26 @@ class Maze extends World {
   }
 
   // Calculates and Displays the Number of Wrong moves.
+  // EFFECT: modifies the given scene to display the score
   private void displayScore(WorldScene scene) {
-    this.scoreBox = new ScoreBox(this.getUniqueColoredSquaresCount() - this.initialFinalPathLength);
+    this.scoreBox = new ScoreBox(this.getScore());
     this.scoreBox.displayImage(scene);
+  }
+
+  // calculates the number of wrong moves that were made when finding the path to
+  // the end
+  // DESIGN: the user of this class should be able to access the score that it
+  // obtains upon reaching
+  // the end
+  public int getScore() {
+    return this.getUniqueColoredSquaresCount() - this.initialFinalPathLength
+        + this.squaresToColor.size();
   }
 
   // Re-adds the visited squares to the scene if showing visited squares is
   // toggled back on.
+  // EFFECT: modifies the mazeScene to include the squares that were visited
   private void addBacklog() {
-
     for (Posn nextCell : this.squaresColored) {
       this.mazeScene.placeImageXY(
           new RectangleImage(this.cellSize - 2, this.cellSize - 2, OutlineMode.SOLID, Color.CYAN),
@@ -233,6 +275,9 @@ class Maze extends World {
   }
 
   // Updates the world when key is pressed. Public due to required override.
+  // EFFECT: See documentation, modifies the world accordingly. If a new maze is
+  // created, resets all
+  // fields
   public void onKeyEvent(String key) {
     if (key.equals("b")) {
       this.isPlayerMode = false;
@@ -318,6 +363,7 @@ class Maze extends World {
   }
 
   // Builds a new maze of a given type, without restarting the game.
+  // EFFECT: resets essential fields for creating a new maze
   private void buildNewMaze(IMode mode) {
     this.finalPath.clear();
     this.player.x = 0;
@@ -411,11 +457,15 @@ class Maze extends World {
         }
       }
     }
+    // since the maze is represented by a spanning tree, this should never occur
     throw new RuntimeException("No Path Found");
   }
 
   // Reconstruct the path from the end of the maze back to the beginning.
   // Yields the path that would be taken if solution was perfect.
+  // EFFECT: modifies finalPath to contain the solution path
+  // modifies the initialFinalPathLength to contain the length of the solution
+  // path
   ArrayList<Posn> reconstruct(HashMap<Posn, Posn> cameFromPosn, Posn nextItem) {
     ArrayList<Posn> steps = new ArrayList<Posn>();
     Posn currPosition = new Posn(nextItem.x, nextItem.y);
@@ -428,6 +478,51 @@ class Maze extends World {
     this.finalPath.add(new Posn(0, 0));
     this.initialFinalPathLength = this.finalPath.size();
     return steps;
+  }
+
+  // returns the current position where the player is
+  // DESIGN: the user should be able to get their position since the user is
+  // controlling it
+  Posn getPlayerPosition() {
+    return player;
+  }
+
+  // returns the solution path from the start to the end of this maze, or an empty
+  // list if the path
+  // has not yet been found. (If the path is in the process of being drawn,
+  // returns the path that
+  // has not yet been drawn)
+  // DESIGN: The user should be able to access this field since the solution path
+  // is only revealed
+  // after the path has already been found, so this is information that the user
+  // already knows
+  ArrayList<Posn> getFinalPath() {
+    return this.finalPath;
+  }
+
+  // computes the ratio of horizontal corridors to vertical corridors
+  // DESIGN: this may be a statistic of interest the the user
+  double getHorizToVertRatio() {
+    double horizEdges = 0;
+    double vertEdges = 0;
+    for (Edge e : this.edgesInMaze) {
+      if (e.getDest().x != e.getSrc().x) {
+        horizEdges += 1;
+      }
+      else {
+        vertEdges += 1;
+      }
+    }
+
+    return horizEdges / vertEdges;
+  }
+
+  // returns a list of all the cells visited, either by the player or by a
+  // searching algorithm
+  // DESIGN: the user should be able to access this as a record of all the cells
+  // that were visited
+  ArrayList<Posn> getSquaresColored() {
+    return this.squaresColored;
   }
 
 }
@@ -446,13 +541,11 @@ class NormalMode implements IMode {
 
   @Override
   public int getHorizWeight(int defaultWeight) {
-    // TODO Auto-generated method stub
     return defaultWeight;
   }
 
   @Override
   public int getVertWeight(int defaultWeight) {
-    // TODO Auto-generated method stub
     return defaultWeight;
   }
 
@@ -463,13 +556,11 @@ class VerticalMode implements IMode {
 
   @Override
   public int getHorizWeight(int defaultWeight) {
-    // TODO Auto-generated method stub
     return defaultWeight;
   }
 
   @Override
   public int getVertWeight(int defaultWeight) {
-    // TODO Auto-generated method stub
     return 5 * defaultWeight;
   }
 
@@ -480,13 +571,11 @@ class HorizontalMode implements IMode {
 
   @Override
   public int getHorizWeight(int defaultWeight) {
-    // TODO Auto-generated method stub
     return 5 * defaultWeight;
   }
 
   @Override
   public int getVertWeight(int defaultWeight) {
-    // TODO Auto-generated method stub
     return 1 * defaultWeight;
   }
 
@@ -677,6 +766,7 @@ class EdgeComparator implements Comparator<Edge> {
   }
 }
 
+// examples and tests for Mazes and its helper classes
 class ExamplesMaze {
 
   void testWorld(Tester t) {
@@ -699,13 +789,24 @@ class ExamplesMaze {
    * 
    * Searching: - Both Depth First Search and Breadth First Search find the goal -
    * The path Backwards does not contain any cycles and it does contain the start
-   * and end points. -
+   * and end points. The score of wrong tiles is properly constructed and correct.
+   * The solution path is consistent regardless of the search method
    * 
    * OnKeyEvent: - While in Player mode (A search has not been initiated), they
    * can move in all four directions if a wall is not present. Pressing the left
    * key moves the player left, the right key right, the down key down and the up
    * key up. Pressing B initiates a Breadth First Search Pressing D initiates a
-   * Depth First Search Pressing N initiates a New Random Maze.
+   * Depth First Search Pressing N initiates a New normal Random Maze. Pressing V
+   * generates a new maze that favors vertical corridors. Pressing H generates a
+   * new maze that favors horizontal corridors. Visibility toggling works as
+   * intended by pressing S also demonstrates that new mazes can be created
+   * without closing the world
+   * 
+   * OnTick - World is properly updated during searching animation, World gets
+   * properly updated once the end is reached. The world properly animates the
+   * drawing of the final path at the conclusion of solving the maze. Visibility
+   * toggling works as intended
+   * 
    * 
    * The User is Notified of the completion of the Game The Solution Path is
    * Displayed.
@@ -718,6 +819,7 @@ class ExamplesMaze {
   SpanningTree tree1;
   SpanningTree tree2;
 
+  // initializes the testing conditions for mazes and spanning trees
   void initTestConditions() {
     maze1 = new Maze(4, 4, new Random(360));
     maze1b = new Maze(4, 4, new Random(360));
@@ -967,58 +1069,362 @@ class ExamplesMaze {
     t.checkExpect(ec.compare(e4, e4), 0);
   }
 
+  // tests that all the key triggers function properly in the onKeyEvent method
   void testOnKeyEvent(Tester t) {
     this.initTestConditions();
 
+    ArrayList<Posn> maze1Path = new ArrayList<Posn>();
+    maze1Path.add(new Posn(3, 3));
+    maze1Path.add(new Posn(3, 2));
+    maze1Path.add(new Posn(2, 2));
+    maze1Path.add(new Posn(2, 1));
+    maze1Path.add(new Posn(2, 0));
+    maze1Path.add(new Posn(1, 0));
+    maze1Path.add(new Posn(1, 1));
+    maze1Path.add(new Posn(0, 1));
+    maze1Path.add(new Posn(0, 0));
+
+    ArrayList<Posn> maze2Path = new ArrayList<Posn>();
+    maze2Path.add(new Posn(2, 2));
+    maze2Path.add(new Posn(1, 2));
+    maze2Path.add(new Posn(0, 2));
+    maze2Path.add(new Posn(0, 1));
+    maze2Path.add(new Posn(0, 0));
+
+    t.checkExpect(maze1.getFinalPath(), new ArrayList<Posn>());
+
     maze1.onKeyEvent("b");
-    t.checkFail(maze1, maze1b, "BFS");
+
+    t.checkExpect(maze1.getFinalPath(), maze1Path);
+    t.checkExpect(maze1.getScore(), 6);
 
     this.initTestConditions();
 
-    maze1.onKeyEvent("b");
-    maze1b.onKeyEvent("d");
-    t.checkFail(maze1, maze1b, "Different Searches");
+    t.checkExpect(maze1.getFinalPath(), new ArrayList<Posn>());
+
+    maze1.onKeyEvent("d");
+
+    t.checkExpect(maze1.getFinalPath(), maze1Path);
+    t.checkExpect(maze1.getScore(), 4);
 
     this.initTestConditions();
+
+    t.checkExpect(maze1.getHorizToVertRatio() > 0.8, true);
+    t.checkExpect(maze1.getHorizToVertRatio() < 1.5, true);
+
     maze1.onKeyEvent("n");
 
-    t.checkFail(maze1, maze1b, "New Maze Created");
+    t.checkExpect(maze1.getHorizToVertRatio() > 0.8, true);
+    t.checkExpect(maze1.getHorizToVertRatio() < 1.5, true);
 
-    this.initTestConditions();
     maze1.onKeyEvent("v");
 
-    t.checkFail(maze1, maze1b, "New Maze Created");
+    t.checkExpect(maze1.getHorizToVertRatio() < 0.6, true);
 
-    this.initTestConditions();
     maze1.onKeyEvent("h");
 
-    t.checkFail(maze1, maze1b, "New Maze Created");
-    
+    t.checkExpect(maze1.getHorizToVertRatio() > 1.5, true);
+
     this.initTestConditions();
+
+    t.checkExpect(maze1.getPlayerPosition(), new Posn(0, 0));
+
     maze1.onKeyEvent("left");
 
-    t.checkExpect(maze1, maze1b); // Should pass since wall blocks movement
-    
-    this.initTestConditions();
+    t.checkExpect(maze1.getPlayerPosition(), new Posn(0, 0));
+
+    maze1.onKeyEvent("up");
+
+    t.checkExpect(maze1.getPlayerPosition(), new Posn(0, 0));
+
     maze1.onKeyEvent("right");
 
-    t.checkExpect(maze1, maze1b); // Should pass since wall blocks movement
-    
-    this.initTestConditions();
+    t.checkExpect(maze1.getPlayerPosition(), new Posn(0, 0));
+
     maze1.onKeyEvent("down");
 
-    t.checkFail(maze1, maze1b, "Player has moved up");
-    
-    this.initTestConditions();
+    t.checkExpect(maze1.getPlayerPosition(), new Posn(0, 1));
+
+    maze1.onKeyEvent("right");
+
+    t.checkExpect(maze1.getPlayerPosition(), new Posn(1, 1));
+
+    maze1.onKeyEvent("right");
+
+    t.checkExpect(maze1.getPlayerPosition(), new Posn(1, 1));
+
+    maze1.onKeyEvent("up");
+
+    t.checkExpect(maze1.getPlayerPosition(), new Posn(1, 0));
+
+    maze1.onKeyEvent("right");
+
+    t.checkExpect(maze1.getPlayerPosition(), new Posn(2, 0));
+
     maze1.onKeyEvent("down");
 
-    t.checkFail(maze1, maze1b, "Player has moved down");
-    
+    t.checkExpect(maze1.getPlayerPosition(), new Posn(2, 1));
+
+    maze1.onKeyEvent("down");
+
+    t.checkExpect(maze1.getPlayerPosition(), new Posn(2, 2));
+
+    maze1.onKeyEvent("right");
+
+    t.checkExpect(maze1.getPlayerPosition(), new Posn(3, 2));
+    t.checkExpect(maze1.getFinalPath(), new ArrayList<Posn>());
+
+    maze1.onKeyEvent("down");
+
+    t.checkExpect(maze1.getPlayerPosition(), new Posn(3, 3));
+    t.checkExpect(maze1.getFinalPath(), maze1Path);
+
+    t.checkExpect(maze2.getPlayerPosition(), new Posn(0, 0));
+
+    maze2.onKeyEvent("right");
+
+    t.checkExpect(maze2.getPlayerPosition(), new Posn(1, 0));
+
+    maze2.onKeyEvent("down");
+
+    t.checkExpect(maze2.getPlayerPosition(), new Posn(1, 0));
+
+    maze2.onKeyEvent("left");
+
+    t.checkExpect(maze2.getPlayerPosition(), new Posn(0, 0));
+
+    maze2.onKeyEvent("down");
+
+    t.checkExpect(maze2.getPlayerPosition(), new Posn(0, 1));
+
+    maze2.onKeyEvent("down");
+
+    t.checkExpect(maze2.getPlayerPosition(), new Posn(0, 2));
+
+    maze2.onKeyEvent("right");
+
+    t.checkExpect(maze2.getPlayerPosition(), new Posn(1, 2));
+    t.checkExpect(maze2.getFinalPath(), new ArrayList<Posn>());
+
+    maze2.onKeyEvent("right");
+
+    t.checkExpect(maze2.getPlayerPosition(), new Posn(2, 2));
+    t.checkExpect(maze2.getFinalPath(), maze2Path);
+
     this.initTestConditions();
+    WorldScene initialScene = maze1.makeScene();
+    t.checkExpect(maze1.makeScene(), initialScene);
+
     maze1.onKeyEvent("s");
+    maze1.onTick();
 
-    t.checkFail(maze1, maze1b, "Squares Toggled");
+    WorldScene secondScene = maze1.makeScene();
+    t.checkExpect(maze1.makeScene(), secondScene);
+    t.checkFail(maze1.makeScene(), initialScene);
 
+    maze1.onKeyEvent("s");
+    maze1.onTick();
+
+    t.checkExpect(maze1.makeScene(), initialScene);
+    t.checkFail(maze1.makeScene(), secondScene);
+
+    maze1.onKeyEvent("s");
+    maze1.onTick();
+
+    t.checkExpect(maze1.makeScene(), secondScene);
+    t.checkFail(maze1.makeScene(), initialScene);
   }
 
+  // test that the onTick method in Maze functions properly
+  void testOnTick(Tester t) {
+    this.initTestConditions();
+    WorldScene initialScene = maze1.makeScene();
+    this.initTestConditions();
+    maze1.onKeyEvent("b");
+    maze1.onKeyEvent("s");
+    maze1.onTick();
+    WorldScene blankMaze = maze1.makeScene();
+    this.initTestConditions();
+    ArrayList<Posn> maze1SquaresColored = new ArrayList<Posn>();
+    maze1SquaresColored.add(new Posn(0, 0));
+
+    t.checkExpect(maze1.makeScene(), initialScene);
+    t.checkExpect(maze1.getSquaresColored(), maze1SquaresColored);
+
+    maze1.onTick();
+
+    maze1SquaresColored.add(new Posn(0, 0));
+    t.checkExpect(maze1.makeScene(), initialScene);
+    t.checkExpect(maze1.getSquaresColored(), maze1SquaresColored);
+
+    maze1.onKeyEvent("b");
+
+    WorldScene searchScene = maze1.makeScene();
+    this.initTestConditions();
+    maze1.onTick();
+    maze1.onKeyEvent("b");
+
+    t.checkExpect(maze1.makeScene(), searchScene);
+    t.checkExpect(maze1.getSquaresColored(), maze1SquaresColored);
+
+    maze1.onTick();
+
+    searchScene.placeImageXY(new RectangleImage(185, 185, OutlineMode.SOLID, Color.CYAN), 94, 94);
+
+    maze1SquaresColored.add(new Posn(0, 0));
+    t.checkExpect(maze1.makeScene(), searchScene);
+    t.checkExpect(maze1.getSquaresColored(), maze1SquaresColored);
+
+    maze1.onTick();
+
+    searchScene.placeImageXY(new RectangleImage(185, 185, OutlineMode.SOLID, Color.CYAN), 94, 281);
+
+    maze1SquaresColored.add(new Posn(0, 1));
+    t.checkExpect(maze1.makeScene(), searchScene);
+    t.checkExpect(maze1.getSquaresColored(), maze1SquaresColored);
+
+    maze1.onTick();
+
+    searchScene.placeImageXY(new RectangleImage(185, 185, OutlineMode.SOLID, Color.CYAN), 94, 468);
+
+    maze1SquaresColored.add(new Posn(0, 2));
+    t.checkExpect(maze1.makeScene(), searchScene);
+    t.checkExpect(maze1.getSquaresColored(), maze1SquaresColored);
+
+    maze1.onTick();
+
+    searchScene.placeImageXY(new RectangleImage(185, 185, OutlineMode.SOLID, Color.CYAN), 281, 281);
+
+    maze1SquaresColored.add(new Posn(1, 1));
+    t.checkExpect(maze1.makeScene(), searchScene);
+    t.checkExpect(maze1.getSquaresColored(), maze1SquaresColored);
+
+    this.initTestConditions();
+    maze1SquaresColored = new ArrayList<Posn>();
+    maze1SquaresColored.add(new Posn(0, 0));
+    t.checkExpect(maze1.makeScene(), initialScene);
+    t.checkExpect(maze1.getSquaresColored(), maze1SquaresColored);
+
+    maze1.onTick();
+
+    maze1SquaresColored.add(new Posn(0, 0));
+    t.checkExpect(maze1.makeScene(), initialScene);
+    t.checkExpect(maze1.getSquaresColored(), maze1SquaresColored);
+
+    maze1.onKeyEvent("d");
+
+    searchScene = maze1.makeScene();
+    this.initTestConditions();
+    maze1.onTick();
+    maze1.onKeyEvent("d");
+
+    t.checkExpect(maze1.makeScene(), searchScene);
+    t.checkExpect(maze1.getSquaresColored(), maze1SquaresColored);
+
+    maze1.onTick();
+
+    searchScene.placeImageXY(new RectangleImage(185, 185, OutlineMode.SOLID, Color.CYAN), 94, 94);
+
+    maze1SquaresColored.add(new Posn(0, 0));
+    t.checkExpect(maze1.makeScene(), searchScene);
+    t.checkExpect(maze1.getSquaresColored(), maze1SquaresColored);
+
+    maze1.onTick();
+
+    searchScene.placeImageXY(new RectangleImage(185, 185, OutlineMode.SOLID, Color.CYAN), 94, 281);
+
+    maze1SquaresColored.add(new Posn(0, 1));
+    t.checkExpect(maze1.makeScene(), searchScene);
+    t.checkExpect(maze1.getSquaresColored(), maze1SquaresColored);
+
+    maze1.onTick();
+
+    searchScene.placeImageXY(new RectangleImage(185, 185, OutlineMode.SOLID, Color.CYAN), 281, 281);
+
+    maze1SquaresColored.add(new Posn(1, 1));
+    t.checkExpect(maze1.makeScene(), searchScene);
+    t.checkExpect(maze1.getSquaresColored(), maze1SquaresColored);
+
+    maze1.onTick();
+
+    searchScene.placeImageXY(new RectangleImage(185, 185, OutlineMode.SOLID, Color.CYAN), 281, 94);
+
+    maze1SquaresColored.add(new Posn(1, 0));
+    t.checkExpect(maze1.makeScene(), searchScene);
+    t.checkExpect(maze1.getSquaresColored(), maze1SquaresColored);
+
+    maze1.onTick();
+
+    searchScene.placeImageXY(new RectangleImage(185, 185, OutlineMode.SOLID, Color.CYAN), 468, 94);
+
+    maze1SquaresColored.add(new Posn(2, 0));
+    t.checkExpect(maze1.makeScene(), searchScene);
+    t.checkExpect(maze1.getSquaresColored(), maze1SquaresColored);
+
+    maze1.onKeyEvent("s");
+
+    t.checkExpect(maze1.makeScene(), searchScene);
+    t.checkExpect(maze1.getSquaresColored(), maze1SquaresColored);
+
+    maze1.onTick();
+
+    t.checkExpect(maze1.makeScene(), blankMaze);
+    t.checkExpect(maze1.getSquaresColored(), maze1SquaresColored);
+
+    maze1.onKeyEvent("s");
+
+    t.checkExpect(maze1.makeScene(), blankMaze);
+    t.checkExpect(maze1.getSquaresColored(), maze1SquaresColored);
+
+    maze1.onTick();
+
+    searchScene.placeImageXY(new RectangleImage(185, 185, OutlineMode.SOLID, Color.CYAN), 94, 281);
+
+    t.checkExpect(maze1.makeScene(), searchScene);
+    t.checkExpect(maze1.getSquaresColored(), maze1SquaresColored);
+
+    maze1.onTick();
+    maze1.onTick();
+    maze1.onTick();
+    maze1.onTick();
+    maze1.onTick();
+    maze1.onTick();
+
+    ArrayList<Posn> maze1Path = new ArrayList<Posn>();
+    maze1Path.add(new Posn(3, 3));
+    maze1Path.add(new Posn(3, 2));
+    maze1Path.add(new Posn(2, 2));
+    maze1Path.add(new Posn(2, 1));
+    maze1Path.add(new Posn(2, 0));
+    maze1Path.add(new Posn(1, 0));
+    maze1Path.add(new Posn(1, 1));
+    maze1Path.add(new Posn(0, 1));
+    maze1Path.add(new Posn(0, 0));
+
+    t.checkExpect(maze1.getFinalPath(), maze1Path);
+
+    maze1.onTick();
+
+    maze1Path.remove(0);
+
+    t.checkExpect(maze1.getFinalPath(), maze1Path);
+
+    maze1.onTick();
+
+    maze1Path.remove(0);
+
+    t.checkExpect(maze1.getFinalPath(), maze1Path);
+
+    maze1.onTick();
+
+    maze1Path.remove(0);
+
+    t.checkExpect(maze1.getFinalPath(), maze1Path);
+
+    maze1.onTick();
+
+    maze1Path.remove(0);
+
+    t.checkExpect(maze1.getFinalPath(), maze1Path);
+  }
 }
